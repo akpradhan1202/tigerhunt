@@ -98,10 +98,10 @@ class Move extends Equatable {
 
 /// Game difficulty levels for AI
 enum AIDifficulty {
-  easy(name: 'Easy', depth: 2, description: 'For beginners'),
-  medium(name: 'Medium', depth: 4, description: 'Casual play'),
-  hard(name: 'Hard', depth: 6, description: 'Challenging'),
-  expert(name: 'Expert', depth: 8, description: 'For masters');
+  easy(name: 'Easy', depth: 1, description: 'For beginners'),
+  medium(name: 'Medium', depth: 2, description: 'Casual play'),
+  hard(name: 'Hard', depth: 3, description: 'Challenging'),
+  expert(name: 'Expert', depth: 4, description: 'For masters');
 
   final String name;
   final int depth;

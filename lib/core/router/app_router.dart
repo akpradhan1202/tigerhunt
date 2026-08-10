@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/game/screens/game_screen.dart';
+import '../../features/game/screens/game_setup_screen.dart';
 import '../../features/game/models/game_models.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -34,6 +35,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),
+      ),
+
+      // Game Setup
+      GoRoute(
+        path: '/setup',
+        name: 'setup',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: GameSetupScreen(
+              isVsAI: extra['isVsAI'] as bool? ?? true,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
 
       // Game

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/models/user_profile.dart';
 import '../widgets/game_mode_card.dart';
@@ -97,7 +98,7 @@ class HomeScreen extends ConsumerWidget {
                           icon: Icons.play_arrow_rounded,
                           label: 'Quick Play',
                           color: AppTheme.forestGreen,
-                          onTap: () {},
+                          onTap: () => context.go('/setup', extra: {'isVsAI': true}),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -106,7 +107,7 @@ class HomeScreen extends ConsumerWidget {
                           icon: Icons.people_outline,
                           label: 'With Friend',
                           color: AppTheme.peacockBlue,
-                          onTap: () {},
+                          onTap: () => context.go('/setup', extra: {'isVsAI': false}),
                         ),
                       ),
                     ],
@@ -143,7 +144,7 @@ class HomeScreen extends ConsumerWidget {
                     subtitle: 'Practice against AI opponents',
                     color: AppTheme.forestGreen,
                     levels: ['Easy', 'Medium', 'Hard', 'Expert'],
-                    onTap: () {},
+                    onTap: () => context.go('/setup', extra: {'isVsAI': true}),
                   ),
 
                   const SizedBox(height: 12),

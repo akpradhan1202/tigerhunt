@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_database/firebase_database.dart';
 import '../../features/game/models/game_models.dart';
 import '../../features/game/models/game_state.dart';
 import '../../features/auth/models/user_profile.dart';
@@ -72,119 +70,48 @@ class OnlineMatch {
 }
 
 /// Service for handling online multiplayer
+/// NOTE: This is a stub implementation. Firebase integration coming soon.
 class MultiplayerService {
-  final FirebaseFirestore _firestore;
-  final FirebaseDatabase _database;
-
-  MultiplayerService({
-    FirebaseFirestore? firestore,
-    FirebaseDatabase? database,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _database = database ?? FirebaseDatabase.instance;
-
-  // Collection references
-  CollectionReference get _matchesCollection =>
-      _firestore.collection('matches');
-
-  CollectionReference get _usersCollection =>
-      _firestore.collection('users');
-
-  DatabaseReference get _activeGamesRef =>
-      _database.ref('active_games');
+  MultiplayerService();
 
   /// Create a new match (waiting for opponent)
-  Future<OnlineMatch> createMatch({
+  /// Returns null - online multiplayer not yet implemented
+  Future<OnlineMatch?> createMatch({
     required String playerId,
     required BoardLevel level,
     required GameTimer timer,
     bool playAsTiger = true,
     String? inviteCode,
   }) async {
-    final matchId = _matchesCollection.doc().id;
-
-    final match = OnlineMatch(
-      id: matchId,
-      tigerPlayerId: playAsTiger ? playerId : '',
-      goatPlayerId: playAsTiger ? null : playerId,
-      level: level,
-      timer: timer,
-      status: MatchStatus.waiting,
-      createdAt: DateTime.now(),
-      inviteCode: inviteCode,
-    );
-
-    await _matchesCollection.doc(matchId).set(match.toJson());
-
-    return match;
+    // TODO: Implement with Firebase when ready
+    return null;
   }
 
   /// Find a random match to join
+  /// Returns null - online multiplayer not yet implemented
   Future<OnlineMatch?> findRandomMatch({
     required String playerId,
     required BoardLevel level,
     required GameTimer timer,
   }) async {
-    // Find waiting matches with same settings
-    final query = await _matchesCollection
-        .where('status', isEqualTo: MatchStatus.waiting.name)
-        .where('level', isEqualTo: level.name)
-        .where('timer', isEqualTo: timer.minutes)
-        .where('tigerPlayerId', isNotEqualTo: playerId)
-        .limit(1)
-        .get();
-
-    if (query.docs.isEmpty) return null;
-
-    final matchDoc = query.docs.first;
-    final match = OnlineMatch.fromJson(
-      matchDoc.data() as Map<String, dynamic>,
-    );
-
-    // Join the match as goat player
-    await matchDoc.reference.update({
-      'goatPlayerId': playerId,
-      'status': MatchStatus.inProgress.name,
-    });
-
-    return match;
+    // TODO: Implement with Firebase when ready
+    return null;
   }
 
   /// Join a match by invite code
+  /// Returns null - online multiplayer not yet implemented
   Future<OnlineMatch?> joinByInviteCode({
     required String playerId,
     required String inviteCode,
   }) async {
-    final query = await _matchesCollection
-        .where('inviteCode', isEqualTo: inviteCode)
-        .where('status', isEqualTo: MatchStatus.waiting.name)
-        .limit(1)
-        .get();
-
-    if (query.docs.isEmpty) return null;
-
-    final matchDoc = query.docs.first;
-    final match = OnlineMatch.fromJson(
-      matchDoc.data() as Map<String, dynamic>,
-    );
-
-    // Don't allow joining own match
-    if (match.tigerPlayerId == playerId) return null;
-
-    // Join the match
-    await matchDoc.reference.update({
-      'goatPlayerId': playerId,
-      'status': MatchStatus.inProgress.name,
-    });
-
-    return match;
+    // TODO: Implement with Firebase when ready
+    return null;
   }
 
   /// Listen to match updates
   Stream<OnlineMatch?> watchMatch(String matchId) {
-    return _matchesCollection.doc(matchId).snapshots().map((snapshot) {
-      if (!snapshot.exists) return null;
-      return OnlineMatch.fromJson(snapshot.data() as Map<String, dynamic>);
-    });
+    // Return empty stream - online multiplayer not yet implemented
+    return const Stream.empty();
   }
 
   /// Send a move to the match
@@ -193,61 +120,18 @@ class MultiplayerService {
     required Move move,
     required GameState newState,
   }) async {
-    await _activeGamesRef.child(matchId).child('moves').push().set({
-      'from': {'row': move.from.row, 'col': move.from.col},
-      'to': {'row': move.to.row, 'col': move.to.col},
-      'capturedAt': move.capturedAt != null
-          ? {'row': move.capturedAt!.row, 'col': move.capturedAt!.col}
-          : null,
-      'pieceType': move.pieceType.name,
-      'timestamp': ServerValue.timestamp,
-    });
-
-    // Update game state
-    await _activeGamesRef.child(matchId).child('state').set({
-      'currentTurn': newState.currentTurn.name,
-      'phase': newState.phase.name,
-      'goatsPlaced': newState.goatsPlaced,
-      'goatsCaptured': newState.goatsCaptured,
-      'winner': newState.winner.name,
-    });
+    // TODO: Implement with Firebase when ready
   }
 
   /// Listen to moves in real-time
   Stream<Move> watchMoves(String matchId) {
-    return _activeGamesRef
-        .child(matchId)
-        .child('moves')
-        .onChildAdded
-        .map((event) {
-      final data = event.snapshot.value as Map<dynamic, dynamic>;
-      return Move(
-        from: Position(
-          (data['from']['row'] as num).toInt(),
-          (data['from']['col'] as num).toInt(),
-        ),
-        to: Position(
-          (data['to']['row'] as num).toInt(),
-          (data['to']['col'] as num).toInt(),
-        ),
-        capturedAt: data['capturedAt'] != null
-            ? Position(
-                (data['capturedAt']['row'] as num).toInt(),
-                (data['capturedAt']['col'] as num).toInt(),
-              )
-            : null,
-        pieceType: PieceType.values.firstWhere(
-          (e) => e.name == data['pieceType'],
-        ),
-      );
-    });
+    // Return empty stream - online multiplayer not yet implemented
+    return const Stream.empty();
   }
 
   /// Cancel a waiting match
   Future<void> cancelMatch(String matchId) async {
-    await _matchesCollection.doc(matchId).update({
-      'status': MatchStatus.cancelled.name,
-    });
+    // TODO: Implement with Firebase when ready
   }
 
   /// Complete a match with results
@@ -255,26 +139,13 @@ class MultiplayerService {
     required String matchId,
     required GameWinner winner,
   }) async {
-    await _matchesCollection.doc(matchId).update({
-      'status': MatchStatus.completed.name,
-      'winner': winner.name,
-      'completedAt': FieldValue.serverTimestamp(),
-    });
-
-    // Clean up real-time data
-    await _activeGamesRef.child(matchId).remove();
+    // TODO: Implement with Firebase when ready
   }
 
   /// Get leaderboard
   Future<List<UserProfile>> getLeaderboard({int limit = 50}) async {
-    final query = await _usersCollection
-        .orderBy('stats.overallRating', descending: true)
-        .limit(limit)
-        .get();
-
-    return query.docs.map((doc) {
-      return UserProfile.fromJson(doc.data() as Map<String, dynamic>);
-    }).toList();
+    // TODO: Implement with Firebase when ready
+    return [];
   }
 
   /// Update user stats after a game
@@ -282,9 +153,7 @@ class MultiplayerService {
     required String odStatsId,
     required PlayerStats newStats,
   }) async {
-    await _usersCollection.doc(userId).update({
-      'stats': newStats.toJson(),
-    });
+    // TODO: Implement with Firebase when ready
   }
 
   /// Generate a unique invite code
@@ -297,9 +166,4 @@ class MultiplayerService {
     }
     return code;
   }
-}
-
-// Helper extension
-extension on String {
-  String get userId => this;
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/game_models.dart';
 import '../models/game_state.dart';
 import '../models/game_engine.dart';
+import '../models/ai_engine.dart';
 import '../widgets/game_board.dart';
 import '../widgets/player_info_bar.dart';
 import '../widgets/captured_pieces.dart';
@@ -33,6 +35,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
     with TickerProviderStateMixin {
   late GameState _gameState;
   late GameEngine _engine;
+  AIPlayer? _aiPlayer;
+  bool _isAIThinking = false;
 
   Position? _selectedPosition;
   List<Move> _validMoves = [];
@@ -53,10 +57,76 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _selectedPosition = null;
     _validMoves = [];
     _lastMove = null;
+    _isAIThinking = false;
+
+    // Setup AI if playing against bots
+    if (widget.aiDifficulty != null) {
+      // Determine which side AI plays
+      final aiPlaysAs = widget.playerRole == PieceType.goat
+          ? PieceType.tiger
+          : PieceType.goat;
+
+      _aiPlayer = AIPlayer(
+        gameEngine: _engine,
+        difficulty: widget.aiDifficulty!,
+        playingAs: aiPlaysAs,
+      );
+
+      // If AI plays goats (goes first), make AI move
+      if (aiPlaysAs == PieceType.goat) {
+        Future.delayed(const Duration(milliseconds: 500), _makeAIMove);
+      }
+    }
+  }
+
+  Future<void> _makeAIMove() async {
+    if (_aiPlayer == null || _gameState.isGameOver || _isAIThinking) return;
+
+    // Check if it's AI's turn
+    final isAITurn = (_aiPlayer!.playingAs == PieceType.tiger &&
+                      _gameState.currentTurn == PlayerTurn.tiger) ||
+                     (_aiPlayer!.playingAs == PieceType.goat &&
+                      _gameState.currentTurn == PlayerTurn.goat);
+
+    if (!isAITurn) return;
+
+    setState(() => _isAIThinking = true);
+
+    // Small delay for natural feel
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final move = await _aiPlayer!.getMove(_gameState);
+
+    if (move != null && mounted) {
+      setState(() {
+        _gameState = _engine.executeMove(_gameState, move);
+        _lastMove = move;
+        _selectedPosition = null;
+        _validMoves = [];
+        _isAIThinking = false;
+      });
+
+      // Check for game over
+      if (_gameState.isGameOver) {
+        _showGameOverDialog();
+      }
+    } else if (mounted) {
+      setState(() => _isAIThinking = false);
+    }
   }
 
   void _onPositionTap(Position pos) {
     if (_gameState.isGameOver) return;
+    if (_isAIThinking) return; // Block input during AI turn
+
+    // Check if it's AI's turn - block player input
+    if (_aiPlayer != null) {
+      final isAITurn = (_aiPlayer!.playingAs == PieceType.tiger &&
+                        _gameState.currentTurn == PlayerTurn.tiger) ||
+                       (_aiPlayer!.playingAs == PieceType.goat &&
+                        _gameState.currentTurn == PlayerTurn.goat);
+      if (isAITurn) return;
+    }
 
     final piece = _gameState.getPieceAt(pos);
 
@@ -137,6 +207,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 
   void _executeMove(Move move) {
+    // Don't allow moves while AI is thinking
+    if (_isAIThinking) return;
+
     setState(() {
       _gameState = _engine.executeMove(_gameState, move);
       _lastMove = move;
@@ -152,6 +225,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     // Check for game over
     if (_gameState.isGameOver) {
       _showGameOverDialog();
+    } else if (_aiPlayer != null) {
+      // Trigger AI move after player moves
+      Future.delayed(const Duration(milliseconds: 200), _makeAIMove);
     }
   }
 

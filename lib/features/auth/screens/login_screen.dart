@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../widgets/login_button.dart';
 import '../widgets/decorative_border.dart';
@@ -57,14 +58,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     setState(() => _isLoading = true);
 
     // Simulate login delay
-    await Future.delayed(const Duration(seconds: 1));
-
-    // TODO: Implement actual authentication
-    // For now, navigate to home
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (mounted) {
       setState(() => _isLoading = false);
       // Navigate to home screen
+      context.go('/home');
     }
   }
 
@@ -143,9 +142,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                         const SizedBox(height: 8),
 
-                        // Subtitle
+                        // Subtitle - Bagh-Chal in English
                         Text(
-                          'बाघ-छाल',
+                          'Bagh-Chal',
                           style: theme.textTheme.titleLarge?.copyWith(
                             color: AppTheme.henna,
                             fontStyle: FontStyle.italic,
@@ -232,6 +231,68 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
+  Widget _buildComingSoonButton({
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required Color backgroundColor,
+    required Color textColor,
+    Color? borderColor,
+  }) {
+    return Stack(
+      children: [
+        Opacity(
+          opacity: 0.6,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              border: borderColor != null
+                  ? Border.all(color: borderColor, width: 1.5)
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: iconColor, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppTheme.turmeric,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'Coming Soon',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildLoginButtons() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -268,40 +329,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
           const SizedBox(height: 24),
 
-          // Google login
-          LoginButton(
+          // Google login - Coming Soon
+          _buildComingSoonButton(
             label: 'Continue with Google',
             icon: Icons.g_mobiledata_rounded,
             iconColor: Colors.red,
             backgroundColor: Colors.white,
             textColor: AppTheme.charcoal,
             borderColor: Colors.grey.shade300,
-            onPressed: _isLoading ? null : () => _handleLogin('google'),
           ),
 
           const SizedBox(height: 12),
 
-          // Apple login
-          LoginButton(
+          // Apple login - Coming Soon
+          _buildComingSoonButton(
             label: 'Continue with Apple',
             icon: Icons.apple,
             iconColor: Colors.white,
             backgroundColor: AppTheme.charcoal,
             textColor: Colors.white,
-            onPressed: _isLoading ? null : () => _handleLogin('apple'),
           ),
 
           const SizedBox(height: 12),
 
-          // Email login
-          LoginButton(
+          // Email login - Coming Soon
+          _buildComingSoonButton(
             label: 'Continue with Email',
             icon: Icons.email_outlined,
             iconColor: AppTheme.peacockBlue,
             backgroundColor: AppTheme.peacockBlue.withOpacity(0.1),
             textColor: AppTheme.peacockBlue,
             borderColor: AppTheme.peacockBlue.withOpacity(0.3),
-            onPressed: _isLoading ? null : () => _handleLogin('email'),
           ),
 
           const SizedBox(height: 20),
