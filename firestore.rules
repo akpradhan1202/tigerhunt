@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Users can create their own profile
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Users can update their own profile (but not rating manipulation)
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && (!request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['stats.overallRating', 'stats.tigerRating', 'stats.goatRating']));
+
+      // No delete allowed
+      allow delete: if false;
+    }
+
+    // Public user profiles for leaderboard
+    match /users/{userId} {
+      allow read: if request.auth != null;
+    }
+
+    // Matches collection
+    match /matches/{matchId} {
+      // Anyone authenticated can read matches
+      allow read: if request.auth != null;
+
+      // Anyone authenticated can create a match
+      allow create: if request.auth != null
+        && request.resource.data.tigerPlayerId == request.auth.uid
+        || request.resource.data.goatPlayerId == request.auth.uid;
+
+      // Players in the match can update it
+      allow update: if request.auth != null
+        && (resource.data.tigerPlayerId == request.auth.uid
+            || resource.data.goatPlayerId == request.auth.uid);
+
+      // No delete - matches are historical records
+      allow delete: if false;
+    }
+
+    // Game moves subcollection
+    match /matches/{matchId}/moves/{moveId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && exists(/databases/$(database)/documents/matches/$(matchId))
+        && (get(/databases/$(database)/documents/matches/$(matchId)).data.tigerPlayerId == request.auth.uid
+            || get(/databases/$(database)/documents/matches/$(matchId)).data.goatPlayerId == request.auth.uid);
+    }
+
+    // Leaderboard (read-only aggregate)
+    match /leaderboard/{entry} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only cloud functions can update
+    }
+
+    // Game statistics (global stats)
+    match /statistics/{stat} {
+      allow read: if true; // Public stats
+      allow write: if false; // Only cloud functions
+    }
+  }
+}

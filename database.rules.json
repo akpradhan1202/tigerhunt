@@ -1,0 +1,48 @@
+{
+  "rules": {
+    // Active games - real-time game state
+    "active_games": {
+      "$matchId": {
+        // Anyone can read active games (for spectating)
+        ".read": "auth != null",
+
+        // State updates
+        "state": {
+          ".write": "auth != null && (data.child('tigerPlayerId').val() == auth.uid || data.child('goatPlayerId').val() == auth.uid)"
+        },
+
+        // Moves - append only
+        "moves": {
+          "$moveId": {
+            ".write": "auth != null && !data.exists()",
+            ".validate": "newData.hasChildren(['from', 'to', 'pieceType', 'timestamp'])"
+          }
+        },
+
+        // Player presence
+        "presence": {
+          "$odStatsId": {
+            ".write": "auth != null && auth.uid == $userId"
+          }
+        }
+      }
+    },
+
+    // Matchmaking queue
+    "matchmaking": {
+      "$odStatsId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $userId",
+        ".validate": "newData.hasChildren(['odStatsId', 'rating', 'level', 'timer', 'timestamp'])"
+      }
+    },
+
+    // Online presence
+    "presence": {
+      "$odStatsId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $userId"
+      }
+    }
+  }
+}
