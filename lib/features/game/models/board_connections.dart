@@ -144,11 +144,12 @@ class BoardConnections {
     return conn;
   }
 
-  /// Traditional Bagh-Chal board
-  /// Cross pattern with center diagonals
+  /// Traditional Bagh-Chal board with triangle extensions
+  /// Main 5x5 grid plus 4 triangular extensions on each side
   Map<Position, List<Position>> _buildTraditionalConnections() {
     final Map<Position, List<Position>> conn = {};
 
+    // Main 5x5 grid positions
     for (int row = 0; row < 5; row++) {
       for (int col = 0; col < 5; col++) {
         final pos = Position(row, col);
@@ -172,6 +173,58 @@ class BoardConnections {
         conn[pos] = neighbors;
       }
     }
+
+    // ========== TRIANGLE EXTENSION POSITIONS ==========
+    // Using negative/extended coordinates for triangle positions
+    // Top triangle: row -1 positions
+    // Bottom triangle: row 5 positions
+    // Left triangle: col -1 positions
+    // Right triangle: col 5 positions
+
+    // TOP TRIANGLE (3 new positions)
+    // Apex at (-1, 2)
+    conn[const Position(-1, 2)] = [
+      const Position(0, 1),  // connects to grid
+      const Position(0, 2),  // connects to grid center
+      const Position(0, 3),  // connects to grid
+    ];
+    // Update grid positions to connect to triangle
+    conn[const Position(0, 1)]!.add(const Position(-1, 2));
+    conn[const Position(0, 2)]!.add(const Position(-1, 2));
+    conn[const Position(0, 3)]!.add(const Position(-1, 2));
+
+    // BOTTOM TRIANGLE (3 new positions)
+    // Apex at (5, 2)
+    conn[const Position(5, 2)] = [
+      const Position(4, 1),
+      const Position(4, 2),
+      const Position(4, 3),
+    ];
+    conn[const Position(4, 1)]!.add(const Position(5, 2));
+    conn[const Position(4, 2)]!.add(const Position(5, 2));
+    conn[const Position(4, 3)]!.add(const Position(5, 2));
+
+    // LEFT TRIANGLE (3 new positions)
+    // Apex at (2, -1)
+    conn[const Position(2, -1)] = [
+      const Position(1, 0),
+      const Position(2, 0),
+      const Position(3, 0),
+    ];
+    conn[const Position(1, 0)]!.add(const Position(2, -1));
+    conn[const Position(2, 0)]!.add(const Position(2, -1));
+    conn[const Position(3, 0)]!.add(const Position(2, -1));
+
+    // RIGHT TRIANGLE (3 new positions)
+    // Apex at (2, 5)
+    conn[const Position(2, 5)] = [
+      const Position(1, 4),
+      const Position(2, 4),
+      const Position(3, 4),
+    ];
+    conn[const Position(1, 4)]!.add(const Position(2, 5));
+    conn[const Position(2, 4)]!.add(const Position(2, 5));
+    conn[const Position(3, 4)]!.add(const Position(2, 5));
 
     return conn;
   }

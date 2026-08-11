@@ -43,6 +43,7 @@ class GameBoard extends StatelessWidget {
                   lastMove: lastMove,
                 ),
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     // Valid move indicators
                     if (showHints)
@@ -71,16 +72,33 @@ class GameBoard extends StatelessWidget {
     );
   }
 
-  Widget _buildMoveIndicator(Move move, double boardSize) {
+  /// Convert board position to screen coordinates
+  Offset _positionToOffset(Position pos, double boardSize) {
     final cellSize = boardSize / (level.cols - 1);
-    final x = move.to.col * cellSize;
-    final y = move.to.row * cellSize;
 
+    if (level == BoardLevel.traditional) {
+      // For traditional board, the grid is offset by 1 cell to make room for triangles
+      // The grid spans from (0,0) to (4,4) in logical coordinates
+      // Triangle apexes are at (-1,2), (5,2), (2,-1), (2,5)
+      // Actual cell size for traditional is boardSize/6 (to fit -1 to 5 = 6 units)
+      final traditionalCellSize = boardSize / 6;
+      // Offset everything by 1 cell
+      return Offset(
+        (pos.col + 1) * traditionalCellSize,
+        (pos.row + 1) * traditionalCellSize,
+      );
+    }
+
+    return Offset(pos.col * cellSize, pos.row * cellSize);
+  }
+
+  Widget _buildMoveIndicator(Move move, double boardSize) {
+    final offset = _positionToOffset(move.to, boardSize);
     final isCapture = move.isCapture;
 
     return Positioned(
-      left: x - 15,
-      top: y - 15,
+      left: offset.dx - 15,
+      top: offset.dy - 15,
       child: Container(
         width: 30,
         height: 30,
@@ -105,9 +123,7 @@ class GameBoard extends StatelessWidget {
   }
 
   Widget _buildPiece(Piece piece, double boardSize) {
-    final cellSize = boardSize / (level.cols - 1);
-    final x = piece.position.col * cellSize;
-    final y = piece.position.row * cellSize;
+    final offset = _positionToOffset(piece.position, boardSize);
 
     final isSelected = selectedPosition == piece.position;
     final isTiger = piece.type == PieceType.tiger;
@@ -115,8 +131,8 @@ class GameBoard extends StatelessWidget {
     return AnimatedPositioned(
       duration: GameStyles.moveDuration,
       curve: Curves.easeOutCubic,
-      left: x - GameStyles.pieceSize / 2,
-      top: y - GameStyles.pieceSize / 2,
+      left: offset.dx - GameStyles.pieceSize / 2,
+      top: offset.dy - GameStyles.pieceSize / 2,
       child: GestureDetector(
         onTap: () => onPositionTap(piece.position),
         child: AnimatedContainer(
@@ -158,18 +174,16 @@ class GameBoard extends StatelessWidget {
   List<Widget> _buildTouchTargets(double boardSize) {
     final connections = BoardConnections(level);
     final positions = connections.allPositions;
-    final cellSize = boardSize / (level.cols - 1);
 
     return positions.map((pos) {
-      final x = pos.col * cellSize;
-      final y = pos.row * cellSize;
+      final offset = _positionToOffset(pos, boardSize);
       final hasPiece = gameState.getPieceAt(pos) != null;
 
       if (hasPiece) return const SizedBox.shrink();
 
       return Positioned(
-        left: x - 20,
-        top: y - 20,
+        left: offset.dx - 20,
+        top: offset.dy - 20,
         child: GestureDetector(
           onTap: () => onPositionTap(pos),
           child: Container(
@@ -416,88 +430,77 @@ class _BoardPainter extends CustomPainter {
   }
 
   void _drawTraditionalBoard(Canvas canvas, Size size, double cellSize) {
+    // For traditional board, we need 6 units total (-1 to 5)
+    // Recalculate cellSize to fit triangles
+    final traditionalCellSize = size.width / 6;
+
     final linePaint = Paint()
       ..color = AppTheme.boardLine
       ..strokeWidth = GameStyles.lineWidth
       ..strokeCap = StrokeCap.round;
 
-    // Draw main grid
+    // Helper to convert logical coords to screen coords
+    // Logical coords: main grid is 0-4, triangles extend to -1 and 5
+    // Screen coords: shifted so -1 maps to 0
+    Offset pos(double col, double row) => Offset(
+      (col + 1) * traditionalCellSize,
+      (row + 1) * traditionalCellSize,
+    );
+
+    // Draw main 5x5 grid
     for (int i = 0; i < 5; i++) {
       canvas.drawLine(
-        Offset(0, i * cellSize),
-        Offset(4 * cellSize, i * cellSize),
+        pos(0, i.toDouble()),
+        pos(4, i.toDouble()),
         linePaint,
       );
       canvas.drawLine(
-        Offset(i * cellSize, 0),
-        Offset(i * cellSize, 4 * cellSize),
+        pos(i.toDouble(), 0),
+        pos(i.toDouble(), 4),
         linePaint,
       );
     }
 
-    // Draw diagonals (traditional pattern)
+    // Draw diagonals on the main grid
     final diagonalPaint = Paint()
       ..color = AppTheme.boardLine.withOpacity(0.8)
       ..strokeWidth = GameStyles.lineWidth * 0.8
       ..strokeCap = StrokeCap.round;
 
-    // Main diagonals
-    canvas.drawLine(
-      Offset(0, 0),
-      Offset(4 * cellSize, 4 * cellSize),
-      diagonalPaint,
-    );
-    canvas.drawLine(
-      Offset(4 * cellSize, 0),
-      Offset(0, 4 * cellSize),
-      diagonalPaint,
-    );
+    // Main corner-to-corner diagonals
+    canvas.drawLine(pos(0, 0), pos(4, 4), diagonalPaint);
+    canvas.drawLine(pos(4, 0), pos(0, 4), diagonalPaint);
 
-    // Triangle diagonals
-    // Top triangle
-    canvas.drawLine(
-      Offset(0, 2 * cellSize),
-      Offset(2 * cellSize, 0),
-      diagonalPaint,
-    );
-    canvas.drawLine(
-      Offset(4 * cellSize, 2 * cellSize),
-      Offset(2 * cellSize, 0),
-      diagonalPaint,
-    );
-    // Bottom triangle
-    canvas.drawLine(
-      Offset(0, 2 * cellSize),
-      Offset(2 * cellSize, 4 * cellSize),
-      diagonalPaint,
-    );
-    canvas.drawLine(
-      Offset(4 * cellSize, 2 * cellSize),
-      Offset(2 * cellSize, 4 * cellSize),
-      diagonalPaint,
-    );
-    // Left triangle
-    canvas.drawLine(
-      Offset(2 * cellSize, 0),
-      Offset(0, 2 * cellSize),
-      diagonalPaint,
-    );
-    canvas.drawLine(
-      Offset(2 * cellSize, 4 * cellSize),
-      Offset(0, 2 * cellSize),
-      diagonalPaint,
-    );
-    // Right triangle
-    canvas.drawLine(
-      Offset(2 * cellSize, 0),
-      Offset(4 * cellSize, 2 * cellSize),
-      diagonalPaint,
-    );
-    canvas.drawLine(
-      Offset(2 * cellSize, 4 * cellSize),
-      Offset(4 * cellSize, 2 * cellSize),
-      diagonalPaint,
-    );
+    // Center diagonals (forming X pattern from center to edges)
+    canvas.drawLine(pos(0, 2), pos(2, 0), diagonalPaint);
+    canvas.drawLine(pos(4, 2), pos(2, 0), diagonalPaint);
+    canvas.drawLine(pos(0, 2), pos(2, 4), diagonalPaint);
+    canvas.drawLine(pos(4, 2), pos(2, 4), diagonalPaint);
+
+    // ========== TRIANGLE EXTENSIONS ==========
+    // TOP TRIANGLE - apex extends upward
+    final topApex = pos(2, -1);
+    canvas.drawLine(pos(1, 0), topApex, linePaint);
+    canvas.drawLine(pos(3, 0), topApex, linePaint);
+    canvas.drawLine(pos(2, 0), topApex, linePaint);
+
+    // BOTTOM TRIANGLE - apex extends downward
+    final bottomApex = pos(2, 5);
+    canvas.drawLine(pos(1, 4), bottomApex, linePaint);
+    canvas.drawLine(pos(3, 4), bottomApex, linePaint);
+    canvas.drawLine(pos(2, 4), bottomApex, linePaint);
+
+    // LEFT TRIANGLE - apex extends leftward
+    final leftApex = pos(-1, 2);
+    canvas.drawLine(pos(0, 1), leftApex, linePaint);
+    canvas.drawLine(pos(0, 3), leftApex, linePaint);
+    canvas.drawLine(pos(0, 2), leftApex, linePaint);
+
+    // RIGHT TRIANGLE - apex extends rightward
+    final rightApex = pos(5, 2);
+    canvas.drawLine(pos(4, 1), rightApex, linePaint);
+    canvas.drawLine(pos(4, 3), rightApex, linePaint);
+    canvas.drawLine(pos(4, 2), rightApex, linePaint);
   }
 
   void _drawIntersectionDots(Canvas canvas, Size size, double cellSize) {
@@ -506,12 +509,28 @@ class _BoardPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final connections = BoardConnections(level);
-    for (final pos in connections.allPositions) {
-      canvas.drawCircle(
-        Offset(pos.col * cellSize, pos.row * cellSize),
-        GameStyles.dotRadius,
-        dotPaint,
-      );
+
+    if (level == BoardLevel.traditional) {
+      // For traditional board, use the same scaling as the board drawing
+      final traditionalCellSize = size.width / 6;
+      for (final pos in connections.allPositions) {
+        canvas.drawCircle(
+          Offset(
+            (pos.col + 1) * traditionalCellSize,
+            (pos.row + 1) * traditionalCellSize,
+          ),
+          GameStyles.dotRadius,
+          dotPaint,
+        );
+      }
+    } else {
+      for (final pos in connections.allPositions) {
+        canvas.drawCircle(
+          Offset(pos.col * cellSize, pos.row * cellSize),
+          GameStyles.dotRadius,
+          dotPaint,
+        );
+      }
     }
   }
 
@@ -522,10 +541,27 @@ class _BoardPainter extends CustomPainter {
       ..color = AppTheme.turmeric.withOpacity(0.4)
       ..style = PaintingStyle.fill;
 
+    // For traditional board, use adjusted cell size
+    final effectiveCellSize = level == BoardLevel.traditional
+        ? cellSize * 4 / 6  // Scale down since traditional uses 6 units
+        : cellSize;
+    final offset = level == BoardLevel.traditional ? effectiveCellSize * 1.5 : 0.0;
+
+    Offset posToOffset(Position pos) {
+      if (level == BoardLevel.traditional) {
+        final traditionalCellSize = cellSize * 4 / 6;
+        return Offset(
+          (pos.col + 1) * traditionalCellSize,
+          (pos.row + 1) * traditionalCellSize,
+        );
+      }
+      return Offset(pos.col * cellSize, pos.row * cellSize);
+    }
+
     // Highlight from position
     if (lastMove!.from != const Position(-1, -1)) {
       canvas.drawCircle(
-        Offset(lastMove!.from.col * cellSize, lastMove!.from.row * cellSize),
+        posToOffset(lastMove!.from),
         GameStyles.dotRadius * 2,
         highlightPaint,
       );
@@ -533,7 +569,7 @@ class _BoardPainter extends CustomPainter {
 
     // Highlight to position
     canvas.drawCircle(
-      Offset(lastMove!.to.col * cellSize, lastMove!.to.row * cellSize),
+      posToOffset(lastMove!.to),
       GameStyles.dotRadius * 2,
       highlightPaint,
     );
