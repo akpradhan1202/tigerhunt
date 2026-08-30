@@ -269,7 +269,7 @@ class BoardThemePreview extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.terracotta.withOpacity(0.1)
+                    ? AppTheme.terracotta.withValues(alpha: 0.1)
                     : Colors.white,
                 borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(10),

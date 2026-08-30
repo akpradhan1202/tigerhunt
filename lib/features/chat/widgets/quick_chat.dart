@@ -20,7 +20,7 @@ class QuickChatBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.parchment,
         border: Border(
-          top: BorderSide(color: AppTheme.sandalwood.withOpacity(0.3)),
+          top: BorderSide(color: AppTheme.sandalwood.withValues(alpha: 0.3)),
         ),
       ),
       child: Column(
@@ -91,13 +91,13 @@ class _QuickChatCategoryState extends State<_QuickChatCategory> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: _expanded
-                    ? AppTheme.terracotta.withOpacity(0.15)
+                    ? AppTheme.terracotta.withValues(alpha: 0.15)
                     : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: _expanded
                       ? AppTheme.terracotta
-                      : AppTheme.sandalwood.withOpacity(0.5),
+                      : AppTheme.sandalwood.withValues(alpha: 0.5),
                 ),
               ),
               child: Row(
@@ -121,7 +121,7 @@ class _QuickChatCategoryState extends State<_QuickChatCategory> {
                     size: 16,
                     color: _expanded
                         ? AppTheme.terracotta
-                        : AppTheme.charcoal.withOpacity(0.5),
+                        : AppTheme.charcoal.withValues(alpha: 0.5),
                   ),
                 ],
               ),
@@ -148,7 +148,7 @@ class _QuickChatCategoryState extends State<_QuickChatCategory> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppTheme.sandalwood.withOpacity(0.3),
+                          color: AppTheme.sandalwood.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
@@ -189,7 +189,7 @@ class QuickChatButton extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppTheme.terracotta.withOpacity(0.4),
+              color: AppTheme.terracotta.withValues(alpha: 0.4),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

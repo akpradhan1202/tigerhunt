@@ -31,10 +31,6 @@ class _BorderPainter extends CustomPainter {
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
-    final fillPaint = Paint()
-      ..color = AppTheme.terracotta.withOpacity(0.3)
-      ..style = PaintingStyle.fill;
-
     final center = size.width / 2;
     final y = isBottom ? 0.0 : size.height;
 

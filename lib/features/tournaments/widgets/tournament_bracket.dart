@@ -64,7 +64,7 @@ class TournamentBracket extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: round == totalRounds
-                ? AppTheme.turmeric.withOpacity(0.2)
+                ? AppTheme.turmeric.withValues(alpha: 0.2)
                 : AppTheme.parchment,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
@@ -119,12 +119,12 @@ class TournamentBracket extends StatelessWidget {
           border: Border.all(
             color: isUserMatch
                 ? AppTheme.terracotta
-                : AppTheme.sandalwood.withOpacity(0.5),
+                : AppTheme.sandalwood.withValues(alpha: 0.5),
             width: isUserMatch ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.inkBrown.withOpacity(0.1),
+              color: AppTheme.inkBrown.withValues(alpha: 0.1),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -141,7 +141,7 @@ class TournamentBracket extends StatelessWidget {
             ),
             Container(
               height: 1,
-              color: AppTheme.sandalwood.withOpacity(0.3),
+              color: AppTheme.sandalwood.withValues(alpha: 0.3),
             ),
             _buildPlayerSlot(
               playerId: match.player2Id,
@@ -169,9 +169,9 @@ class TournamentBracket extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isWinner
-            ? AppTheme.forestGreen.withOpacity(0.1)
+            ? AppTheme.forestGreen.withValues(alpha: 0.1)
             : isCurrentUser
-                ? AppTheme.terracotta.withOpacity(0.05)
+                ? AppTheme.terracotta.withValues(alpha: 0.05)
                 : Colors.transparent,
         borderRadius: BorderRadius.vertical(
           top: isTop ? const Radius.circular(11) : Radius.zero,
@@ -186,17 +186,17 @@ class TournamentBracket extends StatelessWidget {
             height: 24,
             decoration: BoxDecoration(
               color: isBye
-                  ? AppTheme.sandalwood.withOpacity(0.3)
+                  ? AppTheme.sandalwood.withValues(alpha: 0.3)
                   : isCurrentUser
-                      ? AppTheme.terracotta.withOpacity(0.2)
-                      : AppTheme.peacockBlue.withOpacity(0.2),
+                      ? AppTheme.terracotta.withValues(alpha: 0.2)
+                      : AppTheme.peacockBlue.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: isBye
                   ? const Text('-', style: TextStyle(color: Colors.grey))
                   : Text(
-                      _getInitials(playerId!),
+                      _getInitials(playerId),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -212,7 +212,7 @@ class TournamentBracket extends StatelessWidget {
           // Player name
           Expanded(
             child: Text(
-              isBye ? 'BYE' : _getPlayerName(playerId!),
+              isBye ? 'BYE' : _getPlayerName(playerId),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isWinner ? FontWeight.bold : FontWeight.normal,
@@ -232,8 +232,8 @@ class TournamentBracket extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: isWinner
-                    ? AppTheme.forestGreen.withOpacity(0.2)
-                    : AppTheme.sandalwood.withOpacity(0.2),
+                    ? AppTheme.forestGreen.withValues(alpha: 0.2)
+                    : AppTheme.sandalwood.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -364,7 +364,7 @@ class SwissStandingsTable extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.inkBrown.withOpacity(0.1),
+            color: AppTheme.inkBrown.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -376,7 +376,7 @@ class SwissStandingsTable extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppTheme.peacockBlue.withOpacity(0.1),
+              color: AppTheme.peacockBlue.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
               ),
@@ -403,9 +403,9 @@ class SwissStandingsTable extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: isCurrentUser
-                    ? AppTheme.terracotta.withOpacity(0.1)
+                    ? AppTheme.terracotta.withValues(alpha: 0.1)
                     : index.isOdd
-                        ? AppTheme.parchment.withOpacity(0.5)
+                        ? AppTheme.parchment.withValues(alpha: 0.5)
                         : Colors.transparent,
                 border: isCurrentUser
                     ? Border.all(color: AppTheme.terracotta)
@@ -454,7 +454,7 @@ class SwissStandingsTable extends StatelessWidget {
                                 '${standing.playerRating}',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: AppTheme.charcoal.withOpacity(0.5),
+                                  color: AppTheme.charcoal.withValues(alpha: 0.5),
                                 ),
                               ),
                             ],
@@ -474,7 +474,7 @@ class SwissStandingsTable extends StatelessWidget {
                     width: 50,
                     child: Text(
                       '${standing.draws}',
-                      style: TextStyle(color: AppTheme.charcoal.withOpacity(0.6)),
+                      style: TextStyle(color: AppTheme.charcoal.withValues(alpha: 0.6)),
                     ),
                   ),
                   SizedBox(
@@ -546,7 +546,7 @@ class ArenaLeaderboard extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   AppTheme.terracotta,
-                  AppTheme.terracotta.withOpacity(0.8),
+                  AppTheme.terracotta.withValues(alpha: 0.8),
                 ],
               ),
               borderRadius: BorderRadius.circular(12),
@@ -591,7 +591,7 @@ class ArenaLeaderboard extends StatelessWidget {
             itemCount: standings.length > 3 ? standings.length - 3 : 0,
             separatorBuilder: (_, __) => Divider(
               height: 1,
-              color: AppTheme.sandalwood.withOpacity(0.2),
+              color: AppTheme.sandalwood.withValues(alpha: 0.2),
             ),
             itemBuilder: (context, index) {
               final standing = standings[index + 3];
@@ -600,7 +600,7 @@ class ArenaLeaderboard extends StatelessWidget {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 color: isCurrentUser
-                    ? AppTheme.terracotta.withOpacity(0.1)
+                    ? AppTheme.terracotta.withValues(alpha: 0.1)
                     : null,
                 child: Row(
                   children: [
@@ -613,7 +613,7 @@ class ArenaLeaderboard extends StatelessWidget {
                     ),
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: AppTheme.peacockBlue.withOpacity(0.2),
+                      backgroundColor: AppTheme.peacockBlue.withValues(alpha: 0.2),
                       child: Text(
                         standing.playerName.substring(0, 1),
                         style: const TextStyle(
@@ -637,7 +637,7 @@ class ArenaLeaderboard extends StatelessWidget {
                       '${standing.gamesPlayed} games',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.charcoal.withOpacity(0.5),
+                        color: AppTheme.charcoal.withValues(alpha: 0.5),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -647,7 +647,7 @@ class ArenaLeaderboard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.turmeric.withOpacity(0.15),
+                        color: AppTheme.turmeric.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -698,7 +698,7 @@ class ArenaLeaderboard extends StatelessWidget {
         // Player info
         CircleAvatar(
           radius: position == 1 ? 32 : 24,
-          backgroundColor: colors[position - 1].withOpacity(0.3),
+          backgroundColor: colors[position - 1].withValues(alpha: 0.3),
           child: Text(
             standing.playerName.substring(0, 1),
             style: TextStyle(
@@ -736,7 +736,7 @@ class ArenaLeaderboard extends StatelessWidget {
               end: Alignment.bottomCenter,
               colors: [
                 colors[position - 1],
-                colors[position - 1].withOpacity(0.7),
+                colors[position - 1].withValues(alpha: 0.7),
               ],
             ),
             borderRadius: const BorderRadius.vertical(
@@ -762,7 +762,7 @@ class ArenaLeaderboard extends StatelessWidget {
     if (hours > 0) {
       return '${hours}h ${minutes}m';
     }
-    return '${minutes}:${seconds.toString().padLeft(2, '0')}';
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 }
 

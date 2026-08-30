@@ -63,17 +63,17 @@ class _ControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = enabled ? color : color.withOpacity(0.3);
+    final effectiveColor = enabled ? color : color.withValues(alpha: 0.3);
 
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: effectiveColor.withOpacity(0.1),
+          color: effectiveColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: effectiveColor.withOpacity(0.3),
+            color: effectiveColor.withValues(alpha: 0.3),
           ),
         ),
         child: Row(

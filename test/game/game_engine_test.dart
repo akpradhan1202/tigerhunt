@@ -126,6 +126,144 @@ void main() {
         );
         expect(dest, equals(const Position(0, 2)));
       });
+
+      test('every 2x2 cell has exactly one diagonal (classic pattern)', () {
+        for (int row = 0; row < 4; row++) {
+          for (int col = 0; col < 4; col++) {
+            final tl = Position(row, col);
+            final tr = Position(row, col + 1);
+            final bl = Position(row + 1, col);
+            final br = Position(row + 1, col + 1);
+            final diagonals = [
+              connections.areConnected(tl, br),
+              connections.areConnected(tr, bl),
+            ].where((c) => c).length;
+            expect(
+              diagonals,
+              1,
+              reason: 'cell ($row,$col) should have exactly one diagonal',
+            );
+          }
+        }
+      });
+
+      test('diagonals alternate in checkerboard fashion', () {
+        // Cells with (row+col) even carry the \\ diagonal, odd cells the /
+        // diagonal, matching the classic Bagh-Chal board.
+        for (int row = 0; row < 4; row++) {
+          for (int col = 0; col < 4; col++) {
+            final tl = Position(row, col);
+            final br = Position(row + 1, col + 1);
+            expect(
+              connections.areConnected(tl, br),
+              (row + col) % 2 == 0,
+              reason: 'cell ($row,$col) main-diagonal orientation',
+            );
+          }
+        }
+      });
+
+      test('edge midpoints connect to the inner diamond and grid', () {
+        final topMid = connections.getNeighbors(const Position(0, 2));
+        expect(topMid, contains(const Position(0, 1)));
+        expect(topMid, contains(const Position(0, 3)));
+        expect(topMid, contains(const Position(1, 2)));
+        expect(topMid, contains(const Position(1, 1)));
+        expect(topMid, contains(const Position(1, 3)));
+      });
+
+      test('each fan extension has 6 nodes and a hub', () {
+        final fans = [
+          [
+            const Position(-1, 1), const Position(-1, 2), const Position(-1, 3),
+            const Position(-2, 1), const Position(-2, 2), const Position(-2, 3),
+          ],
+          [
+            const Position(5, 1), const Position(5, 2), const Position(5, 3),
+            const Position(6, 1), const Position(6, 2), const Position(6, 3),
+          ],
+          [
+            const Position(1, -1), const Position(2, -1), const Position(3, -1),
+            const Position(1, -2), const Position(2, -2), const Position(3, -2),
+          ],
+          [
+            const Position(1, 5), const Position(2, 5), const Position(3, 5),
+            const Position(1, 6), const Position(2, 6), const Position(3, 6),
+          ],
+        ];
+
+        for (final fan in fans) {
+          for (final node in fan) {
+            expect(connections.isValidPosition(node), isTrue,
+                reason: '$node should be a valid extension node');
+          }
+          // Inner row connects to the hub and the outer row.
+          for (int i = 0; i < 3; i++) {
+            expect(
+              connections.getNeighbors(fan[i]),
+              contains(fan[i + 3]),
+              reason: '${fan[i]} should connect to ${fan[i + 3]}',
+            );
+          }
+          // Rows are joined horizontally.
+          expect(connections.areConnected(fan[0], fan[1]), isTrue);
+          expect(connections.areConnected(fan[1], fan[2]), isTrue);
+          expect(connections.areConnected(fan[3], fan[4]), isTrue);
+          expect(connections.areConnected(fan[4], fan[5]), isTrue);
+        }
+      });
+
+      test('fan hubs connect to the three inner nodes', () {
+        expect(connections.areConnected(
+          const Position(0, 2),
+          const Position(-1, 1),
+        ), isTrue);
+        expect(connections.areConnected(
+          const Position(0, 2),
+          const Position(-1, 2),
+        ), isTrue);
+        expect(connections.areConnected(
+          const Position(0, 2),
+          const Position(-1, 3),
+        ), isTrue);
+        expect(connections.areConnected(
+          const Position(2, 0),
+          const Position(1, -1),
+        ), isTrue);
+        expect(connections.areConnected(
+          const Position(2, 0),
+          const Position(2, -1),
+        ), isTrue);
+        expect(connections.areConnected(
+          const Position(2, 4),
+          const Position(2, 5),
+        ), isTrue);
+      });
+
+      test('board is perfectly symmetrical', () {
+        for (final a in connections.allPositions) {
+          for (final b in connections.getNeighbors(a)) {
+            // Mirror across the vertical axis.
+            expect(
+              connections.areConnected(
+                Position(a.row, 4 - a.col),
+                Position(b.row, 4 - b.col),
+              ),
+              isTrue,
+              reason: '$a-$b should mirror across the vertical axis',
+            );
+            // Mirror across the horizontal axis.
+            expect(
+              connections.areConnected(
+                Position(4 - a.row, a.col),
+                Position(4 - b.row, b.col),
+              ),
+              isTrue,
+              reason: '$a-$b should mirror across the horizontal axis',
+            );
+          }
+        }
+      });
     });
 
     group('Pyramid Board', () {
@@ -202,8 +340,9 @@ void main() {
       test('goats can be placed on empty positions', () {
         final moves = engine.getValidMoves(initialState);
 
-        // Should have 21 valid placements (25 - 4 tigers)
-        expect(moves.length, equals(21));
+        // Traditional board has 49 positions (5x5 grid + 4 fan extensions of
+        // 6 nodes each); 4 are occupied by tigers, so 45 empty placement spots
+        expect(moves.length, equals(45));
 
         // All moves should be placements
         for (final move in moves) {
@@ -224,9 +363,9 @@ void main() {
       });
 
       test('placing a goat updates state correctly', () {
-        final move = Move(
-          from: const Position(-1, -1),
-          to: const Position(2, 2),
+        const move = Move(
+          from: Position(-1, -1),
+          to: Position(2, 2),
           pieceType: PieceType.goat,
         );
 
@@ -277,7 +416,7 @@ void main() {
     group('Tiger Movement', () {
       test('tigers can move to adjacent empty positions', () {
         // Place a goat first
-        var state = engine.executeMove(
+        final state = engine.executeMove(
           initialState,
           const Move(
             from: Position(-1, -1),
@@ -297,7 +436,7 @@ void main() {
 
       test('tigers can capture goats by jumping', () {
         // Setup: Place a goat adjacent to a tiger with empty space beyond
-        var state = engine.executeMove(
+        final state = engine.executeMove(
           initialState,
           const Move(
             from: Position(-1, -1),
@@ -346,18 +485,165 @@ void main() {
         expect(state.goatsOnBoard.length, equals(0));
         expect(state.isPositionEmpty(const Position(0, 1)), isTrue);
       });
+
+      test('re-capturing a goat placed on the same square removes it', () {
+        // Scenario: a tiger captures a goat at (2,2), the player places a new
+        // goat on the same square, and the tiger captures again. The NEW goat
+        // must be the one removed - the previously captured goat's stale
+        // position must not shadow it.
+        var state = engine.executeMove(
+          initialState,
+          const Move(
+            from: Position(-1, -1),
+            to: Position(2, 2),
+            pieceType: PieceType.goat,
+          ),
+        );
+
+        // Move a tiger from corner (0,0) to (1,1), next to the goat.
+        state = engine.executeMove(
+          state,
+          const Move(
+            from: Position(0, 0),
+            to: Position(1, 1),
+            pieceType: PieceType.tiger,
+          ),
+        );
+
+        // Place a filler goat somewhere else so it's the tiger's turn again.
+        state = engine.executeMove(
+          state,
+          const Move(
+            from: Position(-1, -1),
+            to: Position(0, 2),
+            pieceType: PieceType.goat,
+          ),
+        );
+
+        // Tiger at (1,1) captures over (2,2) and lands at (3,3).
+        state = engine.executeMove(
+          state,
+          const Move(
+            from: Position(1, 1),
+            to: Position(3, 3),
+            capturedAt: Position(2, 2),
+            pieceType: PieceType.tiger,
+          ),
+        );
+        expect(state.goatsCaptured, equals(1));
+        expect(state.isPositionEmpty(const Position(2, 2)), isTrue);
+
+        // Player re-places a goat on the same square (2,2).
+        state = engine.executeMove(
+          state,
+          const Move(
+            from: Position(-1, -1),
+            to: Position(2, 2),
+            pieceType: PieceType.goat,
+          ),
+        );
+        // Filler goat at (0,2) + the re-placed goat at (2,2).
+        expect(state.goatsOnBoard.length, equals(2));
+        expect(state.getPieceAt(const Position(2, 2))!.isCaptured, isFalse);
+
+        // Tiger at (3,3) captures back over (2,2) landing at (1,1).
+        state = engine.executeMove(
+          state,
+          const Move(
+            from: Position(3, 3),
+            to: Position(1, 1),
+            capturedAt: Position(2, 2),
+            pieceType: PieceType.tiger,
+          ),
+        );
+
+        expect(state.goatsCaptured, equals(2));
+        // Only the filler goat at (0,2) remains on the board.
+        expect(state.goatsOnBoard.length, equals(1));
+        expect(state.isPositionEmpty(const Position(2, 2)), isTrue);
+        expect(state.getPieceAt(const Position(2, 2)), isNull);
+      });
+    });
+
+    group('Undo / Replay', () {
+      test('replayMoves rolls back the board to an earlier state', () {
+        // Goat at (2,2), then a tiger slides in next to it.
+        var state = engine.executeMove(
+          initialState,
+          const Move(
+            from: Position(-1, -1),
+            to: Position(2, 2),
+            pieceType: PieceType.goat,
+          ),
+        );
+        state = engine.executeMove(
+          state,
+          const Move(
+            from: Position(0, 0),
+            to: Position(1, 1),
+            pieceType: PieceType.tiger,
+          ),
+        );
+        expect(state.moveHistory.length, equals(2));
+
+        // Undo one move (keep 1) -> back to just the goat placed.
+        final afterOne = engine.replayMoves(state, 1);
+        expect(afterOne.moveHistory.length, equals(1));
+        expect(afterOne.getPieceAt(const Position(1, 1)), isNull);
+        expect(afterOne.getPieceAt(const Position(0, 0)), isNotNull);
+        expect(afterOne.getPieceAt(const Position(2, 2)), isNotNull);
+        expect(afterOne.currentTurn, equals(PlayerTurn.tiger));
+
+        // Undo everything -> fresh board, 45 empty placement spots.
+        final fresh = engine.replayMoves(state, 0);
+        expect(fresh.moveHistory, isEmpty);
+        expect(fresh.goatsOnBoard, isEmpty);
+        expect(engine.getValidMoves(fresh).length, equals(45));
+      });
+
+      test('replayMoves reproduces captures and win states', () {
+        // Goat at (0,1) next to tiger at (0,0); tiger captures it.
+        var state = engine.executeMove(
+          initialState,
+          const Move(
+            from: Position(-1, -1),
+            to: Position(0, 1),
+            pieceType: PieceType.goat,
+          ),
+        );
+        state = engine.executeMove(
+          state,
+          const Move(
+            from: Position(0, 0),
+            to: Position(0, 2),
+            capturedAt: Position(0, 1),
+            pieceType: PieceType.tiger,
+          ),
+        );
+        expect(state.goatsCaptured, equals(1));
+
+        // Rolling back before the capture restores the goat.
+        final before = engine.replayMoves(state, 1);
+        expect(before.goatsCaptured, equals(0));
+        expect(before.getPieceAt(const Position(0, 1)), isNotNull);
+
+        // Replaying the full history reproduces the capture exactly.
+        final replayed = engine.replayMoves(state, state.moveHistory.length);
+        expect(replayed.goatsCaptured, equals(1));
+        expect(replayed.goatsOnBoard.length, equals(0));
+      });
     });
 
     group('Win Conditions', () {
       test('tigers win when 5 goats captured', () {
-        var state = GameState(
+        var state = const GameState(
           level: BoardLevel.traditional,
           pieces: [
-            const Piece(type: PieceType.tiger, position: Position(0, 0), id: 't0'),
-            const Piece(type: PieceType.tiger, position: Position(0, 4), id: 't1'),
-            const Piece(type: PieceType.tiger, position: Position(4, 0), id: 't2'),
-            const Piece(type: PieceType.tiger, position: Position(4, 4), id: 't3'),
-            const Piece(type: PieceType.goat, position: Position(0, 1), id: 'g0'),
+            Piece(type: PieceType.tiger, position: Position(0, 0), id: 't0'),
+            Piece(type: PieceType.tiger, position: Position(0, 4), id: 't1'),
+            Piece(type: PieceType.tiger, position: Position(4, 0), id: 't2'),
+            Piece(type: PieceType.tiger, position: Position(4, 4), id: 't3'),
+            Piece(type: PieceType.goat, position: Position(0, 1), id: 'g0'),
           ],
           currentTurn: PlayerTurn.tiger,
           phase: GamePhase.movement,
@@ -383,21 +669,37 @@ void main() {
       });
 
       test('goats win when all tigers trapped', () {
-        // Create state where all tigers are trapped
-        final state = GameState(
+        // Tigers packed in the top-left 2x2 corner. Every adjacent square is
+        // occupied, every fan node is blocked, and every capture landing
+        // (behind each adjacent goat, including the diagonal jumps out through
+        // the top/left fan hubs) is also occupied, so tigers have no moves.
+        const state = GameState(
           level: BoardLevel.traditional,
           pieces: [
             // Tigers boxed in corner
-            const Piece(type: PieceType.tiger, position: Position(0, 0), id: 't0'),
-            const Piece(type: PieceType.tiger, position: Position(0, 1), id: 't1'),
-            const Piece(type: PieceType.tiger, position: Position(1, 0), id: 't2'),
-            const Piece(type: PieceType.tiger, position: Position(1, 1), id: 't3'),
-            // Goats surrounding
-            const Piece(type: PieceType.goat, position: Position(0, 2), id: 'g0'),
-            const Piece(type: PieceType.goat, position: Position(1, 2), id: 'g1'),
-            const Piece(type: PieceType.goat, position: Position(2, 0), id: 'g2'),
-            const Piece(type: PieceType.goat, position: Position(2, 1), id: 'g3'),
-            const Piece(type: PieceType.goat, position: Position(2, 2), id: 'g4'),
+            Piece(type: PieceType.tiger, position: Position(0, 0), id: 't0'),
+            Piece(type: PieceType.tiger, position: Position(0, 1), id: 't1'),
+            Piece(type: PieceType.tiger, position: Position(1, 0), id: 't2'),
+            Piece(type: PieceType.tiger, position: Position(1, 1), id: 't3'),
+            // Goats blocking every escape square
+            Piece(type: PieceType.goat, position: Position(0, 2), id: 'g0'),
+            Piece(type: PieceType.goat, position: Position(1, 2), id: 'g1'),
+            Piece(type: PieceType.goat, position: Position(2, 0), id: 'g2'),
+            Piece(type: PieceType.goat, position: Position(2, 1), id: 'g3'),
+            Piece(type: PieceType.goat, position: Position(2, 2), id: 'g4'),
+            // Goats blocking the triangle apexes
+            Piece(type: PieceType.goat, position: Position(-1, 2), id: 'g5'),
+            Piece(type: PieceType.goat, position: Position(2, -1), id: 'g6'),
+            // Goats blocking every capture landing square
+            Piece(type: PieceType.goat, position: Position(0, 3), id: 'g7'),
+            Piece(type: PieceType.goat, position: Position(1, 3), id: 'g8'),
+            Piece(type: PieceType.goat, position: Position(3, 0), id: 'g9'),
+            Piece(type: PieceType.goat, position: Position(3, 1), id: 'g10'),
+            Piece(type: PieceType.goat, position: Position(3, 3), id: 'g11'),
+            // Goats blocking the fan capture landings (diagonal jumps out of
+            // the corner through the top/left fan hubs)
+            Piece(type: PieceType.goat, position: Position(-1, 3), id: 'g12'),
+            Piece(type: PieceType.goat, position: Position(3, -1), id: 'g13'),
           ],
           currentTurn: PlayerTurn.tiger,
           phase: GamePhase.movement,
@@ -408,6 +710,8 @@ void main() {
         );
 
         expect(engine.areTigersTrapped(state), isTrue);
+        // No tiger move (including captures) should be available
+        expect(engine.getValidMoves(state), isEmpty);
       });
     });
   });

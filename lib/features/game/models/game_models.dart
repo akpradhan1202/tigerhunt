@@ -87,6 +87,39 @@ class Move extends Equatable {
   bool get isCapture => capturedAt != null;
   bool get isPlacement => from == const Position(-1, -1); // Special case for goat placement
 
+  /// Serialize to a Firestore-friendly map
+  Map<String, dynamic> toJson() => {
+        'fromRow': from.row,
+        'fromCol': from.col,
+        'toRow': to.row,
+        'toCol': to.col,
+        'capturedAtRow': capturedAt?.row,
+        'capturedAtCol': capturedAt?.col,
+        'pieceType': pieceType.name,
+      };
+
+  /// Deserialize from a map produced by [toJson]
+  factory Move.fromJson(Map<String, dynamic> json) => Move(
+        from: Position(
+          (json['fromRow'] as num).toInt(),
+          (json['fromCol'] as num).toInt(),
+        ),
+        to: Position(
+          (json['toRow'] as num).toInt(),
+          (json['toCol'] as num).toInt(),
+        ),
+        capturedAt: json['capturedAtRow'] != null
+            ? Position(
+                (json['capturedAtRow'] as num).toInt(),
+                (json['capturedAtCol'] as num).toInt(),
+              )
+            : null,
+        pieceType: PieceType.values.firstWhere(
+          (e) => e.name == json['pieceType'],
+          orElse: () => PieceType.goat,
+        ),
+      );
+
   @override
   List<Object?> get props => [from, to, capturedAt, pieceType];
 

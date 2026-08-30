@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/game_record.dart';
 import '../../game/models/game_models.dart';
+import '../../game/models/game_state.dart';
 
 /// Card displaying a game history entry
 class GameHistoryCard extends StatelessWidget {
@@ -35,15 +36,15 @@ class GameHistoryCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: didWin
-                ? AppTheme.forestGreen.withOpacity(0.3)
+                ? AppTheme.forestGreen.withValues(alpha: 0.3)
                 : record.winner == GameWinner.draw
                     ? AppTheme.sandalwood
-                    : Colors.red.withOpacity(0.3),
+                    : Colors.red.withValues(alpha: 0.3),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.inkBrown.withOpacity(0.08),
+              color: AppTheme.inkBrown.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -63,10 +64,10 @@ class GameHistoryCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: didWin
-                        ? AppTheme.forestGreen.withOpacity(0.15)
+                        ? AppTheme.forestGreen.withValues(alpha: 0.15)
                         : record.winner == GameWinner.draw
-                            ? AppTheme.sandalwood.withOpacity(0.3)
-                            : Colors.red.withOpacity(0.15),
+                            ? AppTheme.sandalwood.withValues(alpha: 0.3)
+                            : Colors.red.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -97,7 +98,7 @@ class GameHistoryCard extends StatelessWidget {
                   _formatTimeAgo(record.playedAt),
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.charcoal.withOpacity(0.5),
+                    color: AppTheme.charcoal.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -132,7 +133,7 @@ class GameHistoryCard extends StatelessWidget {
                               role == PieceType.tiger ? 'Tigers' : 'Goats',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.charcoal.withOpacity(0.6),
+                                color: AppTheme.charcoal.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -148,7 +149,7 @@ class GameHistoryCard extends StatelessWidget {
                   child: Text(
                     'vs',
                     style: TextStyle(
-                      color: AppTheme.charcoal.withOpacity(0.4),
+                      color: AppTheme.charcoal.withValues(alpha: 0.4),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -175,7 +176,7 @@ class GameHistoryCard extends StatelessWidget {
                               role == PieceType.tiger ? 'Goats' : 'Tigers',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.charcoal.withOpacity(0.6),
+                                color: AppTheme.charcoal.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -271,7 +272,7 @@ class _StatItem extends StatelessWidget {
         Icon(
           icon,
           size: 16,
-          color: AppTheme.charcoal.withOpacity(0.5),
+          color: AppTheme.charcoal.withValues(alpha: 0.5),
         ),
         const SizedBox(height: 4),
         Text(
@@ -285,7 +286,7 @@ class _StatItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 10,
-            color: AppTheme.charcoal.withOpacity(0.5),
+            color: AppTheme.charcoal.withValues(alpha: 0.5),
           ),
         ),
       ],

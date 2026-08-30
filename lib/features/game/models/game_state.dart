@@ -54,10 +54,10 @@ class GameState extends Equatable {
     // Place tigers at corners based on board level
     switch (level) {
       case BoardLevel.pyramid:
-        // 3 tigers at the base of pyramid
+        // 3 tigers at the three corners of the pyramid
         tigers.addAll([
-          const Piece(type: PieceType.tiger, position: Position(4, 0), id: 'tiger_0'),
-          const Piece(type: PieceType.tiger, position: Position(4, 2), id: 'tiger_1'),
+          const Piece(type: PieceType.tiger, position: Position(0, 2), id: 'tiger_0'),
+          const Piece(type: PieceType.tiger, position: Position(4, 0), id: 'tiger_1'),
           const Piece(type: PieceType.tiger, position: Position(4, 4), id: 'tiger_2'),
         ]);
         break;
@@ -108,13 +108,12 @@ class GameState extends Equatable {
 
   /// Get piece at position
   Piece? getPieceAt(Position pos) {
-    try {
-      return pieces.firstWhere(
-        (p) => p.position == pos && !p.isCaptured,
-      );
-    } catch (_) {
-      return null;
+    for (final piece in pieces) {
+      if (piece.position == pos && !piece.isCaptured) {
+        return piece;
+      }
     }
+    return null;
   }
 
   /// Check if position is empty

@@ -191,7 +191,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen>
                   child: Text(
                     step.description,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.charcoal.withOpacity(0.7),
+                          color: AppTheme.charcoal.withValues(alpha: 0.7),
                         ),
                     textAlign: TextAlign.center,
                   ),
@@ -238,10 +238,10 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen>
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.turmeric.withOpacity(0.15),
+                      color: AppTheme.turmeric.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppTheme.turmeric.withOpacity(0.3),
+                        color: AppTheme.turmeric.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -293,14 +293,14 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen>
               Text(
                 'Step ${_currentStep + 1} of ${_steps.length}',
                 style: TextStyle(
-                  color: AppTheme.charcoal.withOpacity(0.6),
+                  color: AppTheme.charcoal.withValues(alpha: 0.6),
                   fontSize: 12,
                 ),
               ),
               Text(
                 '${((_currentStep + 1) / _steps.length * 100).round()}%',
                 style: TextStyle(
-                  color: AppTheme.charcoal.withOpacity(0.6),
+                  color: AppTheme.charcoal.withValues(alpha: 0.6),
                   fontSize: 12,
                 ),
               ),
@@ -311,7 +311,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen>
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: (_currentStep + 1) / _steps.length,
-              backgroundColor: AppTheme.sandalwood.withOpacity(0.3),
+              backgroundColor: AppTheme.sandalwood.withValues(alpha: 0.3),
               valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.terracotta),
               minHeight: 6,
             ),
@@ -338,7 +338,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen>
                 side: BorderSide(
                   color: isFirstStep
                       ? AppTheme.sandalwood
-                      : AppTheme.charcoal.withOpacity(0.3),
+                      : AppTheme.charcoal.withValues(alpha: 0.3),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

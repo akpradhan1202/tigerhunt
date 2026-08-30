@@ -32,12 +32,12 @@ class GameModeCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.inkBrown.withOpacity(0.08),
+              color: AppTheme.inkBrown.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -50,7 +50,7 @@ class GameModeCard extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -105,7 +105,7 @@ class GameModeCard extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppTheme.charcoal.withOpacity(0.6),
+                      color: AppTheme.charcoal.withValues(alpha: 0.6),
                     ),
                   ),
                   if (levels != null) ...[
@@ -119,7 +119,7 @@ class GameModeCard extends StatelessWidget {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: color.withOpacity(0.1),
+                                  color: color.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -141,7 +141,7 @@ class GameModeCard extends StatelessWidget {
             // Arrow
             Icon(
               Icons.chevron_right,
-              color: AppTheme.charcoal.withOpacity(0.3),
+              color: AppTheme.charcoal.withValues(alpha: 0.3),
             ),
           ],
         ),

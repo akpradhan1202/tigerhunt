@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "tigerhunt-game"
-  }
+    "tigerhunt": "tigerhunt-ad97a",
+    "default": "tigerhunt-ad97a"
+  },
+  "targets": {},
+  "etags": {}
 }

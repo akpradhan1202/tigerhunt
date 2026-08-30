@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../game/models/game_models.dart';
 import '../models/challenge_models.dart';
 
 /// Card displaying a puzzle
@@ -36,13 +37,13 @@ class PuzzleCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isCompleted
-              ? AppTheme.forestGreen.withOpacity(0.1)
+              ? AppTheme.forestGreen.withValues(alpha: 0.1)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isCompleted
                 ? AppTheme.forestGreen
-                : AppTheme.sandalwood.withOpacity(0.3),
+                : AppTheme.sandalwood.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -55,7 +56,7 @@ class PuzzleCard extends StatelessWidget {
                 color: AppTheme.boardLight,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppTheme.henna.withOpacity(0.5),
+                  color: AppTheme.henna.withValues(alpha: 0.5),
                   width: 2,
                 ),
               ),
@@ -110,7 +111,7 @@ class PuzzleCard extends StatelessWidget {
                     puzzle.description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.charcoal.withOpacity(0.6),
+                      color: AppTheme.charcoal.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -122,7 +123,7 @@ class PuzzleCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: _difficultyColor.withOpacity(0.15),
+                          color: _difficultyColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -139,13 +140,13 @@ class PuzzleCard extends StatelessWidget {
                         'Rating: ${puzzle.rating}',
                         style: TextStyle(
                           fontSize: 11,
-                          color: AppTheme.charcoal.withOpacity(0.5),
+                          color: AppTheme.charcoal.withValues(alpha: 0.5),
                         ),
                       ),
                       const Spacer(),
                       Text(
                         '${puzzle.solutionLength} move${puzzle.solutionLength > 1 ? 's' : ''}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppTheme.peacockBlue,
                           fontWeight: FontWeight.w500,
@@ -176,7 +177,7 @@ class _MiniBoardPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppTheme.boardLine.withOpacity(0.5)
+      ..color = AppTheme.boardLine.withValues(alpha: 0.5)
       ..strokeWidth = 1;
 
     // Draw simple grid

@@ -65,14 +65,14 @@ class _IndianBorderPainter extends CustomPainter {
 
   void _drawTopBorder(Canvas canvas, Size size) {
     final patternPaint = Paint()
-      ..color = AppTheme.terracotta.withOpacity(0.7)
+      ..color = AppTheme.terracotta.withValues(alpha: 0.7)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final y = borderWidth / 2;
     final startX = borderWidth * 2;
     final endX = size.width - borderWidth * 2;
-    final spacing = 15.0;
+    const spacing = 15.0;
 
     for (double x = startX; x < endX; x += spacing) {
       // Small triangles
@@ -87,14 +87,14 @@ class _IndianBorderPainter extends CustomPainter {
 
   void _drawBottomBorder(Canvas canvas, Size size) {
     final patternPaint = Paint()
-      ..color = AppTheme.terracotta.withOpacity(0.7)
+      ..color = AppTheme.terracotta.withValues(alpha: 0.7)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final y = size.height - borderWidth / 2;
     final startX = borderWidth * 2;
     final endX = size.width - borderWidth * 2;
-    final spacing = 15.0;
+    const spacing = 15.0;
 
     for (double x = startX; x < endX; x += spacing) {
       // Small triangles (inverted)
@@ -109,14 +109,14 @@ class _IndianBorderPainter extends CustomPainter {
 
   void _drawLeftBorder(Canvas canvas, Size size) {
     final patternPaint = Paint()
-      ..color = AppTheme.terracotta.withOpacity(0.7)
+      ..color = AppTheme.terracotta.withValues(alpha: 0.7)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final x = borderWidth / 2;
     final startY = borderWidth * 2;
     final endY = size.height - borderWidth * 2;
-    final spacing = 15.0;
+    const spacing = 15.0;
 
     for (double y = startY; y < endY; y += spacing) {
       // Small diamonds
@@ -132,14 +132,14 @@ class _IndianBorderPainter extends CustomPainter {
 
   void _drawRightBorder(Canvas canvas, Size size) {
     final patternPaint = Paint()
-      ..color = AppTheme.terracotta.withOpacity(0.7)
+      ..color = AppTheme.terracotta.withValues(alpha: 0.7)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final x = size.width - borderWidth / 2;
     final startY = borderWidth * 2;
     final endY = size.height - borderWidth * 2;
-    final spacing = 15.0;
+    const spacing = 15.0;
 
     for (double y = startY; y < endY; y += spacing) {
       // Small diamonds
@@ -158,30 +158,32 @@ class _IndianBorderPainter extends CustomPainter {
       ..color = AppTheme.terracotta
       ..style = PaintingStyle.fill;
 
-    final cornerSize = borderWidth * 1.5;
+    // Offset corners inward to prevent clipping
+    final cornerOffset = borderWidth + 8;
+    final cornerRadius = borderWidth * 0.5;
 
     // Top-left corner flower
-    _drawLotusCorner(canvas, Offset(cornerSize, cornerSize), cornerSize * 0.6, paint);
+    _drawLotusCorner(canvas, Offset(cornerOffset, cornerOffset), cornerRadius, paint);
 
     // Top-right corner flower
     _drawLotusCorner(
-        canvas, Offset(size.width - cornerSize, cornerSize), cornerSize * 0.6, paint);
+        canvas, Offset(size.width - cornerOffset, cornerOffset), cornerRadius, paint);
 
     // Bottom-left corner flower
     _drawLotusCorner(
-        canvas, Offset(cornerSize, size.height - cornerSize), cornerSize * 0.6, paint);
+        canvas, Offset(cornerOffset, size.height - cornerOffset), cornerRadius, paint);
 
     // Bottom-right corner flower
     _drawLotusCorner(
         canvas,
-        Offset(size.width - cornerSize, size.height - cornerSize),
-        cornerSize * 0.6,
+        Offset(size.width - cornerOffset, size.height - cornerOffset),
+        cornerRadius,
         paint);
   }
 
   void _drawLotusCorner(Canvas canvas, Offset center, double radius, Paint paint) {
     // Draw lotus-like flower pattern
-    final petalCount = 8;
+    const petalCount = 8;
     for (int i = 0; i < petalCount; i++) {
       final angle = (i * 2 * math.pi) / petalCount;
       final path = Path();
@@ -415,7 +417,7 @@ class _MandalaPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final fillPaint = Paint()
-      ..color = color.withOpacity(0.3)
+      ..color = color.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
 
     // Concentric circles
@@ -424,7 +426,7 @@ class _MandalaPainter extends CustomPainter {
     }
 
     // Petals
-    final petalCount = 12;
+    const petalCount = 12;
     for (int i = 0; i < petalCount; i++) {
       final angle = (i * 2 * math.pi) / petalCount;
       final nextAngle = ((i + 1) * 2 * math.pi) / petalCount;

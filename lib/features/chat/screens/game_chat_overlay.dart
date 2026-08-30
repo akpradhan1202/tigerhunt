@@ -127,7 +127,7 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
           color: AppTheme.cream,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 20,
               offset: const Offset(-5, 0),
             ),
@@ -179,7 +179,7 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
         color: AppTheme.terracotta,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -204,7 +204,7 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
                 Text(
                   'with ${widget.opponentName}',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 12,
                   ),
                 ),
@@ -230,13 +230,13 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
           Icon(
             Icons.chat_bubble_outline,
             size: 48,
-            color: AppTheme.sandalwood.withOpacity(0.5),
+            color: AppTheme.sandalwood.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 12),
           Text(
             'No messages yet',
             style: TextStyle(
-              color: AppTheme.charcoal.withOpacity(0.5),
+              color: AppTheme.charcoal.withValues(alpha: 0.5),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -244,7 +244,7 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
           Text(
             'Say hello to your opponent!',
             style: TextStyle(
-              color: AppTheme.charcoal.withOpacity(0.4),
+              color: AppTheme.charcoal.withValues(alpha: 0.4),
               fontSize: 12,
             ),
           ),
@@ -260,7 +260,7 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -272,7 +272,7 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
           IconButton(
             icon: Icon(
               _showQuickChat ? Icons.keyboard : Icons.emoji_emotions_outlined,
-              color: AppTheme.charcoal.withOpacity(0.6),
+              color: AppTheme.charcoal.withValues(alpha: 0.6),
             ),
             onPressed: () => setState(() => _showQuickChat = !_showQuickChat),
           ),
@@ -285,7 +285,7 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
               decoration: InputDecoration(
                 hintText: 'Type a message...',
                 hintStyle: TextStyle(
-                  color: AppTheme.charcoal.withOpacity(0.4),
+                  color: AppTheme.charcoal.withValues(alpha: 0.4),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),

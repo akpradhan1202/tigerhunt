@@ -41,7 +41,7 @@ void main() {
 
       test('AI plays as tiger when it is tiger turn', () async {
         // Place a goat first
-        var state = gameEngine.executeMove(
+        final state = gameEngine.executeMove(
           initialState,
           const Move(
             from: Position(-1, -1),
@@ -110,7 +110,7 @@ void main() {
     group('AI Strategy', () {
       test('AI captures when possible (medium+ difficulty)', () async {
         // Setup: Goat is in capture position
-        var state = gameEngine.executeMove(
+        final state = gameEngine.executeMove(
           initialState,
           const Move(
             from: Position(-1, -1),
@@ -176,7 +176,7 @@ void main() {
         expect(moveOnGoatTurn, isNull);
 
         // After goat places
-        var state = gameEngine.executeMove(
+        final state = gameEngine.executeMove(
           initialState,
           const Move(
             from: Position(-1, -1),
@@ -203,7 +203,7 @@ void main() {
         expect(moveOnGoatTurn!.pieceType, equals(PieceType.goat));
 
         // After goat places - tiger's turn
-        var state = gameEngine.executeMove(initialState, moveOnGoatTurn);
+        final state = gameEngine.executeMove(initialState, moveOnGoatTurn);
 
         final moveOnTigerTurn = await aiPlayer.getMove(state);
         expect(moveOnTigerTurn, isNull);

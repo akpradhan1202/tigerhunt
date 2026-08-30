@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/game/models/game_models.dart';
+import '../models/game_models.dart';
+import '../models/game_state.dart';
 
 /// Timer state
 class TimerState {
@@ -47,9 +49,6 @@ class TimerState {
     return '$minutes:$seconds';
   }
 }
-
-/// Player turn for timer
-enum PlayerTurn { tiger, goat }
 
 /// Game timer notifier
 class GameTimerNotifier extends StateNotifier<TimerState> {
@@ -145,7 +144,7 @@ final gameTimerProvider = StateNotifierProvider.autoDispose
     initialTime: timer.duration,
     onTimeExpired: (player) {
       // Handle time expiration
-      print('Time expired for $player');
+      debugPrint('Time expired for $player');
     },
   );
 });

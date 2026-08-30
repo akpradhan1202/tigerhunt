@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 /// App icon design with traditional Indian art motifs
 /// Use flutter_launcher_icons to generate actual icons from these designs
@@ -35,7 +34,7 @@ class AppIconPreview extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.22), // iOS icon radius
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -59,10 +58,10 @@ class _AppIconPainter extends CustomPainter {
 
     // Background gradient
     final bgPaint = Paint()
-      ..shader = RadialGradient(
+      ..shader = const RadialGradient(
         colors: [
           AppIconDesign.backgroundCream,
-          const Color(0xFFE8D5B5),
+          Color(0xFFE8D5B5),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
@@ -335,7 +334,7 @@ class SplashScreenDesign extends StatelessWidget {
                   'बाघ चाल • The Ancient Game of Strategy',
                   style: TextStyle(
                     fontSize: 14,
-                    color: const Color(0xFF8B4513).withOpacity(0.7),
+                    color: const Color(0xFF8B4513).withValues(alpha: 0.7),
                     letterSpacing: 1,
                   ),
                 ),
@@ -349,7 +348,7 @@ class SplashScreenDesign extends StatelessWidget {
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      const Color(0xFFE86A17).withOpacity(0.7),
+                      const Color(0xFFE86A17).withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -378,7 +377,7 @@ class SplashScreenDesign extends StatelessWidget {
                   'Inspired by Bagh-Chal',
                   style: TextStyle(
                     fontSize: 12,
-                    color: const Color(0xFF8B4513).withOpacity(0.5),
+                    color: const Color(0xFF8B4513).withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -401,7 +400,7 @@ class _SplashBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF8B4513).withOpacity(0.05)
+      ..color = const Color(0xFF8B4513).withValues(alpha: 0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 

@@ -2,60 +2,73 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users collection
-    match /users/{userId} {
-      // Users can read their own profile
-      allow read: if request.auth != null && request.auth.uid == userId;
-
-      // Users can create their own profile
-      allow create: if request.auth != null && request.auth.uid == userId;
-
-      // Users can update their own profile (but not rating manipulation)
-      allow update: if request.auth != null
-        && request.auth.uid == userId
-        && (!request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['stats.overallRating', 'stats.tigerRating', 'stats.goatRating']));
-
-      // No delete allowed
-      allow delete: if false;
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Public user profiles for leaderboard
+    function isPlayerInMatch(matchData) {
+      return isAuthenticated() && (
+        matchData.get('tigerPlayerId', null) == request.auth.uid ||
+        matchData.get('goatPlayerId', null) == request.auth.uid
+      );
+    }
+
+    function isClaimingSlot(prevData, nextData) {
+      return isAuthenticated() && prevData.get('status', '') == 'waiting' && (
+        (prevData.get('tigerPlayerId', null) == null && nextData.get('tigerPlayerId', null) == request.auth.uid) ||
+        (prevData.get('goatPlayerId', null) == null && nextData.get('goatPlayerId', null) == request.auth.uid)
+      );
+    }
+
+    // Users collection.
+    // Any signed-in user can read profiles (needed for the leaderboard);
+    // a user may only create/update their own, and cannot self-edit ratings.
     match /users/{userId} {
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId
+        && (!request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['stats.overallRating', 'stats.tigerRating', 'stats.goatRating']));
+      allow delete: if false;
     }
 
     // Matches collection
     match /matches/{matchId} {
-      // Anyone authenticated can read matches
-      allow read: if request.auth != null;
+      // Anyone authenticated can read matches (matchmaking + spectating).
+      allow read: if isAuthenticated();
 
-      // Anyone authenticated can create a match
-      allow create: if request.auth != null
-        && request.resource.data.tigerPlayerId == request.auth.uid
-        || request.resource.data.goatPlayerId == request.auth.uid;
+      // The creator must place their own uid in one of the two slots.
+      allow create: if isAuthenticated()
+        && (request.resource.data.get('tigerPlayerId', null) == request.auth.uid
+            || request.resource.data.get('goatPlayerId', null) == request.auth.uid);
 
-      // Players in the match can update it
-      allow update: if request.auth != null
-        && (resource.data.tigerPlayerId == request.auth.uid
-            || resource.data.goatPlayerId == request.auth.uid);
+      // Updates are allowed for:
+      //  (a) an existing participant — sending moves, offering/answering a draw, completing/cancelling
+      //  (b) a second player claiming an open slot on a waiting match
+      allow update: if isPlayerInMatch(resource.data) || isClaimingSlot(resource.data, request.resource.data);
 
       // No delete - matches are historical records
       allow delete: if false;
     }
 
-    // Game moves subcollection
+    // Game moves subcollection (reserved)
     match /matches/{matchId}/moves/{moveId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
         && exists(/databases/$(database)/documents/matches/$(matchId))
-        && (get(/databases/$(database)/documents/matches/$(matchId)).data.tigerPlayerId == request.auth.uid
-            || get(/databases/$(database)/documents/matches/$(matchId)).data.goatPlayerId == request.auth.uid);
+        && isPlayerInMatch(get(/databases/$(database)/documents/matches/$(matchId)).data);
+    }
+
+    // Presence (online player count)
+    match /presence/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Leaderboard (read-only aggregate)
     match /leaderboard/{entry} {
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
       allow write: if false; // Only cloud functions can update
     }
 

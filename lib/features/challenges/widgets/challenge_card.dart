@@ -48,18 +48,18 @@ class ChallengeCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isCompleted
-              ? AppTheme.forestGreen.withOpacity(0.1)
+              ? AppTheme.forestGreen.withValues(alpha: 0.1)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isCompleted
                 ? AppTheme.forestGreen
-                : AppTheme.sandalwood.withOpacity(0.3),
+                : AppTheme.sandalwood.withValues(alpha: 0.3),
             width: isCompleted ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.inkBrown.withOpacity(0.08),
+              color: AppTheme.inkBrown.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -89,7 +89,7 @@ class ChallengeCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _difficultyColor.withOpacity(0.15),
+                    color: _difficultyColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -110,7 +110,7 @@ class ChallengeCard extends StatelessWidget {
             Text(
               description,
               style: TextStyle(
-                color: AppTheme.charcoal.withOpacity(0.7),
+                color: AppTheme.charcoal.withValues(alpha: 0.7),
                 fontSize: 14,
               ),
             ),
@@ -122,7 +122,7 @@ class ChallengeCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: progress / target,
-                backgroundColor: AppTheme.sandalwood.withOpacity(0.3),
+                backgroundColor: AppTheme.sandalwood.withValues(alpha: 0.3),
                 valueColor: AlwaysStoppedAnimation<Color>(
                   isCompleted ? AppTheme.forestGreen : _difficultyColor,
                 ),
@@ -140,7 +140,7 @@ class ChallengeCard extends StatelessWidget {
                   '$progress / $target',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.charcoal.withOpacity(0.6),
+                    color: AppTheme.charcoal.withValues(alpha: 0.6),
                   ),
                 ),
                 Row(
@@ -194,14 +194,14 @@ class ChallengeCard extends StatelessWidget {
             // Weekly badge
             if (isWeekly && !isCompleted) ...[
               const SizedBox(height: 12),
-              Row(
+              const Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_today,
                     size: 14,
                     color: AppTheme.peacockBlue,
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Text(
                     'Resets in 3 days',
                     style: TextStyle(

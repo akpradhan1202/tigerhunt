@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/game_record.dart';
 import '../../game/models/game_models.dart';
+import '../../game/models/game_state.dart';
 import '../widgets/game_history_card.dart';
 
 class GameHistoryScreen extends ConsumerWidget {
@@ -18,6 +20,11 @@ class GameHistoryScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppTheme.cream,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.charcoal),
+          tooltip: 'Back to Play',
+          onPressed: () => context.go('/play'),
+        ),
         title: const Text(
           'Game History',
           style: TextStyle(
@@ -73,7 +80,7 @@ class GameHistoryScreen extends ConsumerWidget {
           Text(
             'Your completed games will appear here',
             style: TextStyle(
-              color: AppTheme.charcoal.withOpacity(0.6),
+              color: AppTheme.charcoal.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -88,26 +95,26 @@ class GameHistoryScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
+      builder: (context) => const Padding(
+        padding: EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Filter Games',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             _FilterChip(label: 'All Games', isSelected: true),
             _FilterChip(label: 'Wins Only', isSelected: false),
             _FilterChip(label: 'Losses Only', isSelected: false),
             _FilterChip(label: 'As Tiger', isSelected: false),
             _FilterChip(label: 'As Goat', isSelected: false),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
           ],
         ),
       ),
@@ -142,7 +149,7 @@ class GameHistoryScreen extends ConsumerWidget {
         winner: GameWinner.tigers,
         goatsCaptured: 5,
         totalMoves: 42,
-        moves: [],
+        moves: const [],
         tigerRatingChange: 12,
         goatRatingChange: -12,
       ),
@@ -162,7 +169,7 @@ class GameHistoryScreen extends ConsumerWidget {
         winner: GameWinner.goats,
         goatsCaptured: 3,
         totalMoves: 58,
-        moves: [],
+        moves: const [],
         tigerRatingChange: -15,
         goatRatingChange: 15,
       ),
@@ -184,7 +191,7 @@ class _FilterChip extends StatelessWidget {
         label: Text(label),
         selected: isSelected,
         onSelected: (selected) {},
-        selectedColor: AppTheme.terracotta.withOpacity(0.2),
+        selectedColor: AppTheme.terracotta.withValues(alpha: 0.2),
         labelStyle: TextStyle(
           color: isSelected ? AppTheme.terracotta : AppTheme.charcoal,
         ),
@@ -214,9 +221,14 @@ class _GameReplayScreenState extends State<GameReplayScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.parchment,
         elevation: 0,
-        title: Text(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.charcoal),
+          tooltip: 'Back to Play',
+          onPressed: () => context.go('/play'),
+        ),
+        title: const Text(
           'Game Replay',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.charcoal,
             fontWeight: FontWeight.bold,
           ),
@@ -261,7 +273,7 @@ class _GameReplayScreenState extends State<GameReplayScreen> {
                       '${widget.record.totalMoves} moves',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.charcoal.withOpacity(0.6),
+                        color: AppTheme.charcoal.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -318,7 +330,7 @@ class _GameReplayScreenState extends State<GameReplayScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -430,7 +442,7 @@ class _PlayerInfo extends StatelessWidget {
           '$rating',
           style: TextStyle(
             fontSize: 12,
-            color: AppTheme.charcoal.withOpacity(0.6),
+            color: AppTheme.charcoal.withValues(alpha: 0.6),
           ),
         ),
       ],

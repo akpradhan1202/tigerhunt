@@ -55,7 +55,7 @@ class TournamentCard extends StatelessWidget {
               : null,
           boxShadow: [
             BoxShadow(
-              color: AppTheme.inkBrown.withOpacity(0.1),
+              color: AppTheme.inkBrown.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -72,7 +72,7 @@ class TournamentCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: _getFormatColor().withOpacity(0.15),
+                    color: _getFormatColor().withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -104,7 +104,7 @@ class TournamentCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: _statusColor.withOpacity(0.15),
+                              color: _statusColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -138,7 +138,7 @@ class TournamentCard extends StatelessWidget {
                         tournament.description,
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppTheme.charcoal.withOpacity(0.6),
+                          color: AppTheme.charcoal.withValues(alpha: 0.6),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -176,7 +176,7 @@ class TournamentCard extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.turmeric.withOpacity(0.15),
+                    color: AppTheme.turmeric.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -209,7 +209,7 @@ class TournamentCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppTheme.forestGreen.withOpacity(0.1),
+                  color: AppTheme.forestGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -248,13 +248,13 @@ class TournamentCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppTheme.charcoal.withOpacity(0.6)),
+          Icon(icon, size: 14, color: AppTheme.charcoal.withValues(alpha: 0.6)),
           const SizedBox(width: 4),
           Text(
             text,
             style: TextStyle(
               fontSize: 11,
-              color: AppTheme.charcoal.withOpacity(0.8),
+              color: AppTheme.charcoal.withValues(alpha: 0.8),
             ),
           ),
         ],

@@ -31,8 +31,32 @@
 
   <title>tigerhunt</title>
   <link rel="manifest" href="manifest.json">
+
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- Google Sign-In Client ID (replace with your OAuth 2.0 Client ID from Firebase Console) -->
+  <meta name="google-signin-client_id" content="909667897523-g4hcsv7bi7cgueksc9lrrch10vv4e0dl.apps.googleusercontent.com">
 </head>
 <body>
+  <script>
+    // Clear old service workers and cache storage to guarantee fresh code
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (var i = 0; i < registrations.length; i++) {
+          registrations[i].unregister();
+        }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (var i = 0; i < names.length; i++) {
+          caches.delete(names[i]);
+        }
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

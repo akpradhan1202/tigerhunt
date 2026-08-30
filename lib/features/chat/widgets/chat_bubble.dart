@@ -29,7 +29,7 @@ class ChatBubble extends StatelessWidget {
           if (!isMe) ...[
             CircleAvatar(
               radius: 14,
-              backgroundColor: AppTheme.forestGreen.withOpacity(0.2),
+              backgroundColor: AppTheme.forestGreen.withValues(alpha: 0.2),
               child: Text(
                 message.senderName[0].toUpperCase(),
                 style: const TextStyle(
@@ -59,7 +59,7 @@ class ChatBubble extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -90,8 +90,8 @@ class ChatBubble extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       color: isMe
-                          ? Colors.white.withOpacity(0.7)
-                          : AppTheme.charcoal.withOpacity(0.5),
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : AppTheme.charcoal.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -111,14 +111,14 @@ class ChatBubble extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppTheme.sandalwood.withOpacity(0.3),
+            color: AppTheme.sandalwood.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             message.message,
             style: TextStyle(
               fontSize: 12,
-              color: AppTheme.charcoal.withOpacity(0.7),
+              color: AppTheme.charcoal.withValues(alpha: 0.7),
               fontStyle: FontStyle.italic,
             ),
           ),

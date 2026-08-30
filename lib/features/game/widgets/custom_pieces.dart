@@ -27,8 +27,8 @@ class TigerPiece extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? AppTheme.peacockBlue.withOpacity(0.5)
-                : Colors.black.withOpacity(0.3),
+                ? AppTheme.peacockBlue.withValues(alpha: 0.5)
+                : Colors.black.withValues(alpha: 0.3),
             blurRadius: isSelected ? 12 : 4,
             offset: const Offset(2, 2),
           ),
@@ -171,7 +171,7 @@ class _TigerPainter extends CustomPainter {
     // Highlight glow
     if (isHighlighted) {
       final glowPaint = Paint()
-        ..color = AppTheme.turmeric.withOpacity(0.5)
+        ..color = AppTheme.turmeric.withValues(alpha: 0.5)
         ..strokeWidth = 3
         ..style = PaintingStyle.stroke
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
@@ -210,8 +210,8 @@ class GoatPiece extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? AppTheme.peacockBlue.withOpacity(0.5)
-                : Colors.black.withOpacity(0.3),
+                ? AppTheme.peacockBlue.withValues(alpha: 0.5)
+                : Colors.black.withValues(alpha: 0.3),
             blurRadius: isSelected ? 12 : 4,
             offset: const Offset(2, 2),
           ),
@@ -250,7 +250,7 @@ class _GoatPainter extends CustomPainter {
 
     // Wool texture pattern (dots)
     final woolPaint = Paint()
-      ..color = AppTheme.goatGray.withOpacity(0.4)
+      ..color = AppTheme.goatGray.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
 
     final random = math.Random(42); // Fixed seed for consistent pattern
@@ -364,7 +364,7 @@ class _GoatPainter extends CustomPainter {
     // Highlight glow
     if (isHighlighted) {
       final glowPaint = Paint()
-        ..color = AppTheme.turmeric.withOpacity(0.5)
+        ..color = AppTheme.turmeric.withValues(alpha: 0.5)
         ..strokeWidth = 3
         ..style = PaintingStyle.stroke
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);

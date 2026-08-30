@@ -89,17 +89,27 @@ class GameEngine {
     return moves;
   }
 
+  /// Rebuild a fresh game state by replaying the first [moveCount] moves of
+  /// [state]'s history from the initial position. Used to implement undo by
+  /// rolling the board back to an earlier point in the game.
+  GameState replayMoves(GameState state, int moveCount, {GameTimer? timer}) {
+    var rebuilt = GameState.initial(state.level, timer: timer);
+    final moves = state.moveHistory.take(moveCount);
+    for (final move in moves) {
+      rebuilt = executeMove(rebuilt, move);
+    }
+    return rebuilt;
+  }
+
   /// Execute a move and return new game state
   GameState executeMove(GameState state, Move move) {
     if (!isValidMove(state, move)) {
       throw ArgumentError('Invalid move: $move');
-    }
-
-    List<Piece> newPieces = List.from(state.pieces);
+    }    final List<Piece> newPieces = List.from(state.pieces);
     int newGoatsPlaced = state.goatsPlaced;
     int newGoatsCaptured = state.goatsCaptured;
     GamePhase newPhase = state.phase;
-    List<Move> newHistory = [...state.moveHistory, move];
+    final List<Move> newHistory = [...state.moveHistory, move];
 
     if (move.pieceType == PieceType.goat) {
       if (move.isPlacement) {
@@ -116,9 +126,13 @@ class GameEngine {
           newPhase = GamePhase.movement;
         }
       } else {
-        // Move existing goat
+        // Move existing goat (skip captured pieces, which keep their old
+        // position in the list for the captured-pieces display)
         final goatIndex = newPieces.indexWhere(
-          (p) => p.position == move.from && p.type == PieceType.goat,
+          (p) =>
+              p.position == move.from &&
+              p.type == PieceType.goat &&
+              !p.isCaptured,
         );
         if (goatIndex >= 0) {
           newPieces[goatIndex] = newPieces[goatIndex].copyWith(
@@ -129,7 +143,10 @@ class GameEngine {
     } else {
       // Tiger move
       final tigerIndex = newPieces.indexWhere(
-        (p) => p.position == move.from && p.type == PieceType.tiger,
+        (p) =>
+            p.position == move.from &&
+            p.type == PieceType.tiger &&
+            !p.isCaptured,
       );
       if (tigerIndex >= 0) {
         newPieces[tigerIndex] = newPieces[tigerIndex].copyWith(
@@ -137,10 +154,15 @@ class GameEngine {
         );
       }
 
-      // Handle capture
+      // Handle capture: mark the ACTIVE goat at the capture square, not an
+      // earlier goat that was already captured there (captured pieces keep
+      // their old position in the list).
       if (move.isCapture) {
         final goatIndex = newPieces.indexWhere(
-          (p) => p.position == move.capturedAt && p.type == PieceType.goat,
+          (p) =>
+              p.position == move.capturedAt &&
+              p.type == PieceType.goat &&
+              !p.isCaptured,
         );
         if (goatIndex >= 0) {
           newPieces[goatIndex] = newPieces[goatIndex].copyWith(

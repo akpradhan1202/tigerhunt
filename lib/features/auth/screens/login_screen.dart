@@ -1,9 +1,14 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../widgets/login_button.dart';
-import '../widgets/decorative_border.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/services/google_button.dart'
+    if (dart.library.html) '../../../core/services/google_button_web.dart'
+    as google_button;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -17,8 +22,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-
-  bool _isLoading = false;
+  StreamSubscription? _googleUserSub;
+  Widget? _webGoogleButton;
 
   @override
   void initState() {
@@ -46,320 +51,278 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
 
     _controller.forward();
+
+    _setupWebGoogleSignIn();
+  }
+
+  void _setupWebGoogleSignIn() {
+    if (!kIsWeb) return;
+    final auth = ref.read(authServiceProvider.notifier);
+    if (!auth.isFirebaseReady) return;
+
+    // Render the official Google button once (web only)
+    _webGoogleButton = google_button.buildGoogleSignInButton();
+
+    // Listen for sign-in completion via onCurrentUserChanged stream
+    _googleUserSub = auth.googleUserStream?.listen((user) async {
+      if (user != null && mounted) {
+        final success = await auth.handleGoogleUser(user);
+        if (success && mounted) {
+          context.go('/play');
+        }
+      }
+    });
+
+    // Fallback: periodically try signInSilently to catch the user
+    // after they complete the GIS flow (button click)
+    Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!mounted || ref.read(authServiceProvider).isAuthenticated) {
+        timer.cancel();
+        return;
+      }
+      _trySignInSilently(auth);
+    });
+  }
+
+  Future<void> _trySignInSilently(AuthService auth) async {
+    try {
+      final user = await auth.signInWithGoogleSilently();
+      if (user != null && mounted) {
+        final success = await auth.handleGoogleUser(user);
+        if (success && mounted) {
+          context.go('/play');
+        }
+      }
+    } catch (_) {
+      // Ignore - will retry
+    }
   }
 
   @override
   void dispose() {
+    _googleUserSub?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin(String provider) async {
-    setState(() => _isLoading = true);
+  Future<void> _handleGuestLogin() async {
+    final authService = ref.read(authServiceProvider.notifier);
+    final success = await authService.signInAsGuest();
 
-    // Simulate login delay
-    await Future.delayed(const Duration(milliseconds: 500));
+    if (success && mounted) {
+      context.go('/play');
+    }
+  }
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-      // Navigate to home screen
-      context.go('/home');
+  Future<void> _handleGoogleLogin() async {
+    final authService = ref.read(authServiceProvider.notifier);
+    final success = await authService.signInWithGoogle();
+
+    if (success && mounted) {
+      context.go('/play');
+    } else if (mounted && ref.read(authServiceProvider).error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ref.read(authServiceProvider).error!),
+          backgroundColor: AppTheme.terracotta,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleAppleLogin() async {
+    final authService = ref.read(authServiceProvider.notifier);
+    final success = await authService.signInWithApple();
+
+    if (success && mounted) {
+      context.go('/play');
+    } else if (mounted && ref.read(authServiceProvider).error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ref.read(authServiceProvider).error!),
+          backgroundColor: AppTheme.terracotta,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final theme = Theme.of(context);
+    final authState = ref.watch(authServiceProvider);
+    final isLoading = authState.isLoading;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.cream,
-              AppTheme.parchment,
-              AppTheme.sandalwood,
-            ],
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                SizedBox(height: size.height * 0.06),
-
-                // Decorative top border
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: const DecorativeBorder(),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Game logo/title
-                SlideTransition(
-                  position: _slideAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Column(
-                      children: [
-                        // Tiger & Goat icons
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: AppTheme.darkBg,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo section
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Column(
                           children: [
-                            _buildAnimalIcon('🐯', AppTheme.tigerOrange),
-                            const SizedBox(width: 20),
-                            Text(
-                              'VS',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: AppTheme.henna,
-                                fontWeight: FontWeight.bold,
+                            // Tiger icon
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: AppTheme.tigerOrange.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: Text('🐯', style: TextStyle(fontSize: 50)),
                               ),
                             ),
-                            const SizedBox(width: 20),
-                            _buildAnimalIcon('🐐', AppTheme.forestGreen),
+
+                            const SizedBox(height: 24),
+
+                            // Game title
+                            const Text(
+                              'TigerHunt',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            const Text(
+                              'Bagh-Chal',
+                              style: TextStyle(
+                                color: AppTheme.greenAccent,
+                                fontSize: 18,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            Text(
+                              'Ancient Strategy Game',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 14,
+                              ),
+                            ),
                           ],
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // Game title
-                        Text(
-                          'TigerHunt',
-                          style: theme.textTheme.displaySmall?.copyWith(
-                            color: AppTheme.terracotta,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        // Subtitle - Bagh-Chal in English
-                        Text(
-                          'Bagh-Chal',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: AppTheme.henna,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        Text(
-                          'Ancient Indian Strategy Game',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.inkBrown.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
 
-                SizedBox(height: size.height * 0.06),
+                    const SizedBox(height: 48),
 
-                // Login buttons
-                SlideTransition(
-                  position: _slideAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: _buildLoginButtons(),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Terms and privacy
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Text(
-                    'By continuing, you agree to our Terms of Service\nand Privacy Policy',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.inkBrown.withOpacity(0.5),
+                    // Login card
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: _buildLoginCard(isLoading),
+                      ),
                     ),
-                  ),
+
+                    const SizedBox(height: 24),
+
+                    // Footer
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Text(
+                        'By continuing, you agree to our Terms of Service',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 24),
-
-                // Decorative bottom element
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: const DecorativeBorder(isBottom: true),
-                ),
-
-                const SizedBox(height: 24),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnimalIcon(String emoji, Color bgColor) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: bgColor.withOpacity(0.2),
-        shape: BoxShape.circle,
-        border: Border.all(color: bgColor, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: bgColor.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          emoji,
-          style: const TextStyle(fontSize: 28),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildComingSoonButton({
-    required String label,
-    required IconData icon,
-    required Color iconColor,
-    required Color backgroundColor,
-    required Color textColor,
-    Color? borderColor,
-  }) {
-    return Stack(
-      children: [
-        Opacity(
-          opacity: 0.6,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(12),
-              border: borderColor != null
-                  ? Border.all(color: borderColor, width: 1.5)
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: iconColor, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: 4,
-          right: 8,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppTheme.turmeric,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              'Coming Soon',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
+
+            // Loading overlay
+            if (isLoading)
+              Container(
+                color: Colors.black54,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.tigerOrange,
+                  ),
+                ),
+              ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildLoginButtons() {
+  Widget _buildLoginCard(bool isLoading) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.henna.withOpacity(0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.inkBrown.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: AppTheme.cardDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
-          Text(
+          const Text(
             'Welcome, Player!',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.charcoal,
-                  fontWeight: FontWeight.w600,
-                ),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Sign in to track your progress',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.inkBrown.withOpacity(0.7),
-                ),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
           ),
           const SizedBox(height: 24),
 
-          // Google login - Coming Soon
-          _buildComingSoonButton(
-            label: 'Continue with Google',
-            icon: Icons.g_mobiledata_rounded,
-            iconColor: Colors.red,
-            backgroundColor: Colors.white,
-            textColor: AppTheme.charcoal,
-            borderColor: Colors.grey.shade300,
-          ),
+          // Google login (official button on web, custom button on mobile)
+          if (_webGoogleButton != null)
+            Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: _webGoogleButton!,
+              ),
+            )
+          else
+            _buildLoginButton(
+              label: 'Continue with Google',
+              icon: Icons.g_mobiledata_rounded,
+              iconColor: Colors.red,
+              backgroundColor: Colors.white,
+              textColor: AppTheme.charcoal,
+              onTap: isLoading ? null : _handleGoogleLogin,
+            ),
 
           const SizedBox(height: 12),
 
-          // Apple login - Coming Soon
-          _buildComingSoonButton(
+          // Apple login
+          _buildLoginButton(
             label: 'Continue with Apple',
             icon: Icons.apple,
             iconColor: Colors.white,
-            backgroundColor: AppTheme.charcoal,
+            backgroundColor: Colors.black,
             textColor: Colors.white,
-          ),
-
-          const SizedBox(height: 12),
-
-          // Email login - Coming Soon
-          _buildComingSoonButton(
-            label: 'Continue with Email',
-            icon: Icons.email_outlined,
-            iconColor: AppTheme.peacockBlue,
-            backgroundColor: AppTheme.peacockBlue.withOpacity(0.1),
-            textColor: AppTheme.peacockBlue,
-            borderColor: AppTheme.peacockBlue.withOpacity(0.3),
+            onTap: isLoading ? null : _handleAppleLogin,
           ),
 
           const SizedBox(height: 20),
@@ -367,47 +330,75 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           // Divider
           Row(
             children: [
-              Expanded(
-                child: Divider(color: AppTheme.sandalwood.withOpacity(0.5)),
-              ),
+              Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.2))),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'or',
-                  style: TextStyle(
-                    color: AppTheme.inkBrown.withOpacity(0.5),
-                  ),
-                ),
+                child: Text('or', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
               ),
-              Expanded(
-                child: Divider(color: AppTheme.sandalwood.withOpacity(0.5)),
-              ),
+              Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.2))),
             ],
           ),
 
           const SizedBox(height: 20),
 
-          // Guest play
-          LoginButton(
+          // Guest play - always enabled
+          _buildLoginButton(
             label: 'Play as Guest',
             icon: Icons.person_outline,
-            iconColor: AppTheme.forestGreen,
-            backgroundColor: AppTheme.forestGreen.withOpacity(0.1),
-            textColor: AppTheme.forestGreen,
-            borderColor: AppTheme.forestGreen.withOpacity(0.3),
-            onPressed: _isLoading ? null : () => _handleLogin('guest'),
+            iconColor: Colors.white,
+            backgroundColor: AppTheme.greenAccent,
+            textColor: Colors.white,
+            onTap: isLoading ? null : _handleGuestLogin,
           ),
 
           const SizedBox(height: 8),
 
           Text(
             'Guest progress won\'t be saved online',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.inkBrown.withOpacity(0.5),
-                  fontStyle: FontStyle.italic,
-                ),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.4),
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoginButton({
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required Color backgroundColor,
+    required Color textColor,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: iconColor, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

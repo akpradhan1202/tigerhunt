@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/challenge_models.dart';
 import '../widgets/challenge_card.dart';
 import '../widgets/puzzle_card.dart';
 
 class ChallengesScreen extends ConsumerStatefulWidget {
-  const ChallengesScreen({super.key});
+  final int initialTab;
+
+  const ChallengesScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<ChallengesScreen> createState() => _ChallengesScreenState();
@@ -19,7 +22,11 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 2),
+    );
   }
 
   @override
@@ -35,6 +42,11 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
       appBar: AppBar(
         backgroundColor: AppTheme.cream,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.charcoal),
+          tooltip: 'Back to Play',
+          onPressed: () => context.go('/play'),
+        ),
         title: const Text(
           'Challenges',
           style: TextStyle(
@@ -46,7 +58,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
           controller: _tabController,
           indicatorColor: AppTheme.terracotta,
           labelColor: AppTheme.terracotta,
-          unselectedLabelColor: AppTheme.charcoal.withOpacity(0.5),
+          unselectedLabelColor: AppTheme.charcoal.withValues(alpha: 0.5),
           tabs: const [
             Tab(text: 'Daily', icon: Icon(Icons.today, size: 20)),
             Tab(text: 'Puzzles', icon: Icon(Icons.extension, size: 20)),
@@ -88,11 +100,11 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
 
           ChallengeCard(
             title: '🐯 Tiger Mastery',
-            description: 'Capture 3 goats in a single game',
+            description: 'Capture 5 goats and win the game',
             difficulty: ChallengeDifficulty.easy,
-            reward: 50,
-            progress: 1,
-            target: 3,
+            reward: 100,
+            progress: 0,
+            target: 5,
             isCompleted: false,
             onTap: () {},
           ),
@@ -101,11 +113,11 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
 
           ChallengeCard(
             title: '🐐 Goat Guardian',
-            description: 'Trap 2 tigers in one game',
+            description: 'Trap all 4 tigers to win the game',
             difficulty: ChallengeDifficulty.medium,
-            reward: 100,
+            reward: 200,
             progress: 0,
-            target: 2,
+            target: 4,
             isCompleted: false,
             onTap: () {},
           ),
@@ -114,9 +126,9 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
 
           ChallengeCard(
             title: '⚡ Speed Demon',
-            description: 'Win a game in under 5 minutes',
+            description: 'Win a game in under 3 minutes',
             difficulty: ChallengeDifficulty.hard,
-            reward: 200,
+            reward: 300,
             progress: 0,
             target: 1,
             isCompleted: false,
@@ -137,11 +149,11 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
 
           ChallengeCard(
             title: '🏆 Champion',
-            description: 'Win 10 games this week',
+            description: 'Win 15 games this week',
             difficulty: ChallengeDifficulty.expert,
-            reward: 500,
+            reward: 1000,
             progress: 6,
-            target: 10,
+            target: 15,
             isCompleted: false,
             isWeekly: true,
             onTap: () {},
@@ -164,7 +176,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.terracotta.withOpacity(0.4),
+            color: AppTheme.terracotta.withValues(alpha: 0.4),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -178,7 +190,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text('📅', style: TextStyle(fontSize: 28)),
@@ -199,7 +211,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
                     Text(
                       _formatDate(DateTime.now()),
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 14,
                       ),
                     ),
@@ -218,15 +230,15 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: 0.33,
-              backgroundColor: Colors.white.withOpacity(0.3),
+              value: 0.0,
+              backgroundColor: Colors.white.withValues(alpha: 0.3),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 8,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
-            '1/3 Completed',
+            '0/3 Completed',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w500,
@@ -285,7 +297,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.inkBrown.withOpacity(0.1),
+            color: AppTheme.inkBrown.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -297,7 +309,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: AppTheme.peacockBlue.withOpacity(0.15),
+              color: AppTheme.peacockBlue.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Center(
@@ -320,7 +332,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
                 Row(
                   children: [
                     const Text(
-                      '1,250',
+                      '1,750',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -334,7 +346,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.forestGreen.withOpacity(0.15),
+                        color: AppTheme.forestGreen.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
@@ -442,7 +454,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.saffron.withOpacity(0.4),
+            color: AppTheme.saffron.withValues(alpha: 0.4),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -467,14 +479,14 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
           Text(
             'Keep playing daily to maintain your streak',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Text(
@@ -512,7 +524,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
                 _weekdayShort(day.weekday),
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppTheme.charcoal.withOpacity(0.6),
+                  color: AppTheme.charcoal.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 8),
@@ -523,7 +535,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
                   color: hasPlayed
                       ? AppTheme.forestGreen
                       : (isToday
-                          ? AppTheme.terracotta.withOpacity(0.2)
+                          ? AppTheme.terracotta.withValues(alpha: 0.2)
                           : Colors.grey.shade200),
                   shape: BoxShape.circle,
                   border: isToday
@@ -538,7 +550,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
                           style: TextStyle(
                             color: isToday
                                 ? AppTheme.terracotta
-                                : AppTheme.charcoal.withOpacity(0.5),
+                                : AppTheme.charcoal.withValues(alpha: 0.5),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -561,7 +573,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
         border: Border.all(
           color: claimed
               ? AppTheme.forestGreen
-              : AppTheme.sandalwood.withOpacity(0.3),
+              : AppTheme.sandalwood.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -571,8 +583,8 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
             height: 44,
             decoration: BoxDecoration(
               color: claimed
-                  ? AppTheme.forestGreen.withOpacity(0.15)
-                  : AppTheme.sandalwood.withOpacity(0.15),
+                  ? AppTheme.forestGreen.withValues(alpha: 0.15)
+                  : AppTheme.sandalwood.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -602,7 +614,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
                   '$reward XP',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.charcoal.withOpacity(0.6),
+                    color: AppTheme.charcoal.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -613,7 +625,7 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
           else
             Icon(
               Icons.lock_outline,
-              color: AppTheme.charcoal.withOpacity(0.3),
+              color: AppTheme.charcoal.withValues(alpha: 0.3),
             ),
         ],
       ),
@@ -621,7 +633,11 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
   }
 
   void _openPuzzle(Puzzle puzzle) {
-    // Navigate to puzzle screen
+    context.push('/game', extra: {
+      'puzzle': puzzle,
+      'level': puzzle.position.level,
+      'playerRole': puzzle.playerRole,
+    });
   }
 
   String _formatDate(DateTime date) {

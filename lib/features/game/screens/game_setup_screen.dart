@@ -25,18 +25,18 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.cream,
+      backgroundColor: AppTheme.darkBg,
       appBar: AppBar(
-        backgroundColor: AppTheme.cream,
+        backgroundColor: AppTheme.darkerBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.charcoal),
-          onPressed: () => context.go('/home'),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.go('/play'),
         ),
         title: Text(
           widget.isVsAI ? 'Play vs AI' : 'Game Setup',
           style: const TextStyle(
-            color: AppTheme.charcoal,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -84,12 +84,12 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                 child: ElevatedButton(
                   onPressed: _startGame,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.forestGreen,
+                    backgroundColor: AppTheme.greenAccent,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 4,
+                    elevation: 0,
                   ),
                   child: const Text(
                     'Start Game',
@@ -110,10 +110,11 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.charcoal,
-            fontWeight: FontWeight.bold,
-          ),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 
@@ -128,23 +129,14 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
               margin: EdgeInsets.only(
                 right: board != BoardLevel.values.last ? 8 : 0,
               ),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               decoration: BoxDecoration(
-                color: isSelected ? AppTheme.terracotta : Colors.white,
+                color: isSelected ? AppTheme.greenAccent : AppTheme.cardDark,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected ? AppTheme.terracotta : Colors.grey.shade300,
+                  color: isSelected ? AppTheme.greenAccent : Colors.white12,
                   width: 2,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.terracotta.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
               ),
               child: Column(
                 children: [
@@ -154,15 +146,15 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                         : board == BoardLevel.square
                             ? '⬛'
                             : '✦',
-                    style: const TextStyle(fontSize: 24),
+                    style: const TextStyle(fontSize: 28),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text(
                     board.name,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : AppTheme.charcoal,
+                      color: isSelected ? Colors.white : Colors.white70,
                       fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -192,11 +184,11 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.peacockBlue : Colors.white,
+              color: isSelected ? AppTheme.greenAccent : AppTheme.cardDark,
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
-                color: isSelected ? AppTheme.peacockBlue : Colors.grey.shade300,
-                width: 2,
+                color: isSelected ? AppTheme.greenAccent : Colors.white12,
+                width: 1,
               ),
             ),
             child: Row(
@@ -205,13 +197,13 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                 Icon(
                   timer == GameTimer.unlimited ? Icons.all_inclusive : Icons.timer,
                   size: 18,
-                  color: isSelected ? Colors.white : AppTheme.charcoal,
+                  color: isSelected ? Colors.white : Colors.white70,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   timer.label,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.charcoal,
+                    color: isSelected ? Colors.white : Colors.white70,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -233,10 +225,10 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.forestGreen.withOpacity(0.1) : Colors.white,
+              color: isSelected ? AppTheme.greenAccent.withValues(alpha: 0.15) : AppTheme.cardDark,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? AppTheme.forestGreen : Colors.grey.shade300,
+                color: isSelected ? AppTheme.greenAccent : Colors.white12,
                 width: 2,
               ),
             ),
@@ -247,9 +239,9 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                   height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isSelected ? AppTheme.forestGreen : Colors.transparent,
+                    color: isSelected ? AppTheme.greenAccent : Colors.transparent,
                     border: Border.all(
-                      color: isSelected ? AppTheme.forestGreen : Colors.grey.shade400,
+                      color: isSelected ? AppTheme.greenAccent : Colors.white38,
                       width: 2,
                     ),
                   ),
@@ -264,8 +256,8 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                     children: [
                       Text(
                         difficulty.name,
-                        style: TextStyle(
-                          color: AppTheme.charcoal,
+                        style: const TextStyle(
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -273,7 +265,7 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                       Text(
                         difficulty.description,
                         style: TextStyle(
-                          color: AppTheme.charcoal.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                           fontSize: 13,
                         ),
                       ),
@@ -290,8 +282,8 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
                       height: 20,
                       decoration: BoxDecoration(
                         color: filled
-                            ? AppTheme.forestGreen
-                            : Colors.grey.shade300,
+                            ? AppTheme.greenAccent
+                            : Colors.white24,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     );
@@ -331,28 +323,19 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
 
   Widget _buildRoleCard(PieceType role, String emoji, String name, String desc) {
     final isSelected = _selectedRole == role;
-    final color = role == PieceType.goat ? AppTheme.forestGreen : AppTheme.tigerOrange;
+    final color = role == PieceType.goat ? AppTheme.greenAccent : AppTheme.tigerOrange;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedRole = role),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.white,
+          color: isSelected ? color.withValues(alpha: 0.15) : AppTheme.cardDark,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
+            color: isSelected ? color : Colors.white12,
             width: 2,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
         ),
         child: Column(
           children: [
@@ -360,8 +343,8 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
             const SizedBox(height: 8),
             Text(
               name,
-              style: TextStyle(
-                color: AppTheme.charcoal,
+              style: const TextStyle(
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -371,7 +354,7 @@ class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
               desc,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppTheme.charcoal.withOpacity(0.6),
+                color: Colors.white.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),

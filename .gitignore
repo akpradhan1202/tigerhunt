@@ -101,3 +101,10 @@ ui-debug.log
 .env
 .env.*
 !.env.example
+
+# Temporary agent/test directories & root screenshots
+.codebuff_tmp/
+.freebuff/
+.playwright-mcp/
+/*.png
+

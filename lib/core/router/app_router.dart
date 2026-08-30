@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/screens/login_screen.dart';
-import '../../features/home/screens/home_screen.dart';
+import '../../features/challenges/screens/challenges_screen.dart';
+import '../../features/history/screens/game_history_screen.dart';
+import '../../features/play/screens/play_screen.dart';
+import '../../features/stats/screens/stats_screen.dart';
+import '../../features/tournaments/screens/tournaments_screen.dart';
+import '../../features/tutorial/screens/tutorial_screen.dart';
 import '../../features/game/screens/game_screen.dart';
 import '../../features/game/screens/game_setup_screen.dart';
 import '../../features/game/models/game_models.dart';
+import '../../features/multiplayer/screens/online_play_screen.dart';
+import '../../features/challenges/models/challenge_models.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -24,13 +31,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Home
+      // Play (game hub / landing screen)
       GoRoute(
-        path: '/home',
-        name: 'home',
+        path: '/play',
+        name: 'play',
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
-          child: const HomeScreen(),
+          child: const PlayScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -55,6 +62,71 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      // Puzzles
+      GoRoute(
+        path: '/puzzles',
+        name: 'puzzles',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const ChallengesScreen(initialTab: 1),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Learn (Tutorial)
+      GoRoute(
+        path: '/learn',
+        name: 'learn',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const TutorialScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Stats
+      GoRoute(
+        path: '/stats',
+        name: 'stats',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const StatsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Tournaments
+      GoRoute(
+        path: '/tournaments',
+        name: 'tournaments',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const TournamentsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Game History
+      GoRoute(
+        path: '/history',
+        name: 'history',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const GameHistoryScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
       // Game
       GoRoute(
         path: '/game',
@@ -69,6 +141,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               timer: extra['timer'] as GameTimer? ?? GameTimer.unlimited,
               aiDifficulty: extra['aiDifficulty'] as AIDifficulty?,
               playerRole: extra['playerRole'] as PieceType?,
+              matchId: extra['matchId'] as String?,
+              puzzle: extra['puzzle'] as Puzzle?,
             ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               const begin = Offset(1.0, 0.0);
@@ -92,7 +166,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'online',
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
-          child: const _PlaceholderScreen(title: 'Play Online'),
+          child: const OnlinePlayScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

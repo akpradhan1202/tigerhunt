@@ -237,7 +237,7 @@ class TutorialSteps {
       winner: GameWinner.none,
       goatsPlaced: 1,
       goatsCaptured: 0,
-      moveHistory: [],
+      moveHistory: const [],
     );
   }
 
@@ -260,7 +260,7 @@ class TutorialSteps {
       winner: GameWinner.none,
       goatsPlaced: 20,
       goatsCaptured: 0,
-      moveHistory: [],
+      moveHistory: const [],
     );
   }
 
@@ -288,7 +288,7 @@ class TutorialSteps {
       winner: GameWinner.goats,
       goatsPlaced: 20,
       goatsCaptured: 0,
-      moveHistory: [],
+      moveHistory: const [],
     );
   }
 }

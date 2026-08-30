@@ -36,8 +36,8 @@ class PlayerInfoBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: isCurrentTurn
             ? (isPlayer
-                ? AppTheme.forestGreen.withOpacity(0.15)
-                : AppTheme.terracotta.withOpacity(0.15))
+                ? AppTheme.forestGreen.withValues(alpha: 0.15)
+                : AppTheme.terracotta.withValues(alpha: 0.15))
             : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
@@ -52,7 +52,7 @@ class PlayerInfoBar extends StatelessWidget {
                   color: (isPlayer
                           ? AppTheme.forestGreen
                           : AppTheme.terracotta)
-                      .withOpacity(0.2),
+                      .withValues(alpha: 0.2),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -67,8 +67,8 @@ class PlayerInfoBar extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: isPlayer
-                  ? AppTheme.forestGreen.withOpacity(0.2)
-                  : AppTheme.terracotta.withOpacity(0.2),
+                  ? AppTheme.forestGreen.withValues(alpha: 0.2)
+                  : AppTheme.terracotta.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -85,7 +85,7 @@ class PlayerInfoBar extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.charcoal,
@@ -111,7 +111,7 @@ class PlayerInfoBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -139,7 +139,7 @@ class PlayerInfoBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isCurrentTurn
                     ? AppTheme.charcoal
-                    : AppTheme.charcoal.withOpacity(0.8),
+                    : AppTheme.charcoal.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

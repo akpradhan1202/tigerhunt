@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../game/models/game_models.dart';
 import '../models/tournament_models.dart';
 import '../widgets/tournament_card.dart';
-import '../widgets/tournament_bracket.dart';
 
 class TournamentsScreen extends ConsumerStatefulWidget {
   const TournamentsScreen({super.key});
@@ -36,6 +36,11 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
       appBar: AppBar(
         backgroundColor: AppTheme.cream,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.charcoal),
+          tooltip: 'Back to Play',
+          onPressed: () => context.go('/play'),
+        ),
         title: const Text(
           'Tournaments',
           style: TextStyle(
@@ -55,7 +60,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
           controller: _tabController,
           indicatorColor: AppTheme.terracotta,
           labelColor: AppTheme.terracotta,
-          unselectedLabelColor: AppTheme.charcoal.withOpacity(0.5),
+          unselectedLabelColor: AppTheme.charcoal.withValues(alpha: 0.5),
           tabs: const [
             Tab(text: 'Active'),
             Tab(text: 'Upcoming'),
@@ -198,7 +203,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.peacockBlue.withOpacity(0.4),
+            color: AppTheme.peacockBlue.withValues(alpha: 0.4),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -212,7 +217,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -239,7 +244,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
           Text(
             'Compete for 5,000 XP prize pool',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 16,
             ),
           ),
@@ -283,7 +288,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 12,
             ),
           ),
@@ -307,7 +312,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.inkBrown.withOpacity(0.1),
+            color: AppTheme.inkBrown.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -336,7 +341,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
                     Text(
                       '12 tournaments played',
                       style: TextStyle(
-                        color: AppTheme.charcoal.withOpacity(0.6),
+                        color: AppTheme.charcoal.withValues(alpha: 0.6),
                         fontSize: 12,
                       ),
                     ),
@@ -376,7 +381,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
           label,
           style: TextStyle(
             fontSize: 10,
-            color: AppTheme.charcoal.withOpacity(0.6),
+            color: AppTheme.charcoal.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -396,7 +401,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.terracotta.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.terracotta.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -404,7 +409,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.terracotta.withOpacity(0.15),
+              color: AppTheme.terracotta.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -430,7 +435,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
                   status,
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.charcoal.withOpacity(0.6),
+                    color: AppTheme.charcoal.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -489,7 +494,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
                   date,
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.charcoal.withOpacity(0.6),
+                    color: AppTheme.charcoal.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -529,7 +534,7 @@ class _TournamentsScreenState extends ConsumerState<TournamentsScreen>
           Text(
             subtitle,
             style: TextStyle(
-              color: AppTheme.charcoal.withOpacity(0.6),
+              color: AppTheme.charcoal.withValues(alpha: 0.6),
             ),
           ),
         ],
