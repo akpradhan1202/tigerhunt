@@ -1,0 +1,6 @@
+{
+  "name": "Tiger Hunt",
+  "description": "Traditional Bagh-Chal (Tiger & Goats) board strategy game with AI, Puzzles, Tournaments, and Local Multiplayer",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
