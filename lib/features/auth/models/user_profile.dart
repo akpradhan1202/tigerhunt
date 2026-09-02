@@ -24,11 +24,13 @@ class UserProfile extends Equatable {
     this.isGuest = false,
   });
 
-  factory UserProfile.guest() {
+  factory UserProfile.guest({String? name}) {
     final now = DateTime.now();
     return UserProfile(
       id: 'guest_${now.millisecondsSinceEpoch}',
-      displayName: 'Guest Player',
+      displayName: (name != null && name.trim().isNotEmpty)
+          ? name.trim()
+          : 'Guest Player',
       authProvider: AuthProvider.guest,
       stats: PlayerStats.initial(),
       createdAt: now,
@@ -95,6 +97,7 @@ enum AuthProvider {
   google('Google'),
   apple('Apple'),
   email('Email'),
+  phone('Phone'),
   guest('Guest');
 
   final String displayName;

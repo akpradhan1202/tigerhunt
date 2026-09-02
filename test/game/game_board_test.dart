@@ -96,16 +96,16 @@ void main() {
       expectOffset(const Position(2, 2), 200, 200);
       expectOffset(const Position(0, 2), 200, 100);
 
-      // Top fan: outer row flat at y=0.035 (x: 0.39, 0.50, 0.61), inner row
-      // at y=0.135 (x: 0.43, 0.50, 0.57), hub is grid (0,2).
-      expectOffset(const Position(-2, 1), 156, 14);
+      // Top fan: outer row flat at y=0.035 (x: 0.30, 0.50, 0.70), inner row
+      // at y=0.14 (x: 0.38, 0.50, 0.62), hub is grid (0,2).
+      expectOffset(const Position(-2, 1), 120, 14);
       expectOffset(const Position(-2, 2), 200, 14);
-      expectOffset(const Position(-1, 1), 172, 54);
-      expectOffset(const Position(-1, 2), 200, 54);
+      expectOffset(const Position(-1, 1), 152, 56);
+      expectOffset(const Position(-1, 2), 200, 56);
 
       // Side fans mirror the top fan.
       expectOffset(const Position(2, -2), 14, 200);
-      expectOffset(const Position(2, -1), 54, 200);
+      expectOffset(const Position(2, -1), 56, 200);
       expectOffset(const Position(2, 6), 386, 200);
     });
   });

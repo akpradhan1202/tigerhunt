@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/multiplayer_service.dart';
 import '../models/chat_message.dart';
+import '../utils/profanity_filter.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/quick_chat.dart';
 
@@ -34,8 +37,9 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
   late Animation<Offset> _slideAnimation;
 
   bool _showQuickChat = true;
+  String? _warningMessage;
+  StreamSubscription<List<ChatMessage>>? _chatSub;
 
-  // Mock messages for demo
   final List<ChatMessage> _messages = [];
 
   @override
@@ -53,10 +57,26 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
       curve: Curves.easeOutCubic,
     ));
     _animationController.forward();
+
+    // Listen to real-time chat messages from Firestore
+    _chatSub = ref
+        .read(multiplayerServiceProvider)
+        .watchChatMessages(widget.matchId)
+        .listen((messages) {
+      if (mounted) {
+        setState(() {
+          _messages
+            ..clear()
+            ..addAll(messages);
+        });
+        _scrollToBottom();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _chatSub?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -65,39 +85,63 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
   }
 
   void _sendMessage(String text) {
-    if (text.trim().isEmpty) return;
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+
+    // Check for abusive or offensive language
+    if (ProfanityFilter.hasProfanity(trimmed)) {
+      setState(() {
+        _warningMessage = '⚠️ Abusive language is strictly prohibited.';
+      });
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) setState(() => _warningMessage = null);
+      });
+      return;
+    }
+
+    final message = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: widget.currentUserId,
+      senderName: 'You',
+      message: trimmed,
+      timestamp: DateTime.now(),
+      isQuickChat: false,
+    );
 
     setState(() {
-      _messages.add(ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: widget.currentUserId,
-        senderName: 'You',
-        message: text.trim(),
-        timestamp: DateTime.now(),
-        isQuickChat: false,
-      ));
+      _warningMessage = null;
+      if (!_messages.any((m) => m.id == message.id)) {
+        _messages.add(message);
+      }
     });
 
     _messageController.clear();
     _scrollToBottom();
 
-    // TODO: Send to Firebase
+    // Send to Firebase
+    ref.read(multiplayerServiceProvider).sendChatMessage(widget.matchId, message);
   }
 
   void _sendQuickChat(String message) {
+    final chatMsg = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: widget.currentUserId,
+      senderName: 'You',
+      message: message,
+      timestamp: DateTime.now(),
+      isQuickChat: true,
+    );
+
     setState(() {
-      _messages.add(ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: widget.currentUserId,
-        senderName: 'You',
-        message: message,
-        timestamp: DateTime.now(),
-        isQuickChat: true,
-      ));
+      _warningMessage = null;
+      if (!_messages.any((m) => m.id == chatMsg.id)) {
+        _messages.add(chatMsg);
+      }
     });
 
     _scrollToBottom();
-    // TODO: Send to Firebase
+    // Send to Firebase
+    ref.read(multiplayerServiceProvider).sendChatMessage(widget.matchId, chatMsg);
   }
 
   void _scrollToBottom() {
@@ -266,16 +310,41 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Toggle quick chat
-          IconButton(
-            icon: Icon(
-              _showQuickChat ? Icons.keyboard : Icons.emoji_emotions_outlined,
-              color: AppTheme.charcoal.withValues(alpha: 0.6),
+          if (_warningMessage != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 16, color: Colors.red.shade700),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _warningMessage!,
+                      style: TextStyle(fontSize: 12, color: Colors.red.shade800, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onPressed: () => setState(() => _showQuickChat = !_showQuickChat),
-          ),
+          Row(
+            children: [
+              // Toggle quick chat
+              IconButton(
+                icon: Icon(
+                  _showQuickChat ? Icons.keyboard : Icons.emoji_emotions_outlined,
+                  color: AppTheme.charcoal.withValues(alpha: 0.6),
+                ),
+                onPressed: () => setState(() => _showQuickChat = !_showQuickChat),
+              ),
 
           // Text input
           Expanded(
@@ -316,6 +385,8 @@ class _GameChatOverlayState extends ConsumerState<GameChatOverlay>
               onPressed: () => _sendMessage(_messageController.text),
             ),
           ),
+        ],
+      ),
         ],
       ),
     );

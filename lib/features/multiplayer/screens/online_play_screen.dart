@@ -6,12 +6,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/services/auth_service.dart';
 import '../../../core/services/multiplayer_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../game/models/game_models.dart';
+import '../../friends/models/friend.dart';
+import '../../friends/services/friends_service.dart';
 
 class OnlinePlayScreen extends ConsumerStatefulWidget {
-  const OnlinePlayScreen({super.key});
+  final int initialTab;
+
+  const OnlinePlayScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<OnlinePlayScreen> createState() => _OnlinePlayScreenState();
@@ -21,7 +26,7 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  BoardLevel _selectedLevel = BoardLevel.traditional;
+  BoardLevel _selectedLevel = BoardLevel.square;
   GameTimer _selectedTimer = GameTimer.ten;
   bool _playAsTiger = true;
   String _inviteCode = '';
@@ -33,17 +38,38 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
   StreamSubscription<OnlineMatch>? _subscription;
   StreamSubscription<int>? _onlineCountSub;
   Timer? _heartbeatTimer;
+  Timer? _searchTicker;
+  int _searchSeconds = 0;
   int _onlineCount = 1;
   bool _dialogVisible = false;
+  final TextEditingController _friendEmailController = TextEditingController();
+  final TextEditingController _searchFriendController = TextEditingController();
+
+  bool _isGuest = false;
+  late final FriendsService _friendsService;
+  List<Friend> _searchResults = [];
+  bool _isSearchingFriends = false;
+  List<Friend> _friendsList = [];
+  bool _isLoadingFriends = false;
 
   late final MultiplayerService _service;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final auth = ref.read(authServiceProvider);
+    _isGuest = auth.user?.isGuest ?? true;
+    _tabController = TabController(
+      length: _isGuest ? 1 : 2,
+      vsync: this,
+      initialIndex: _isGuest ? 0 : widget.initialTab.clamp(0, 1),
+    );
     _service = ref.read(multiplayerServiceProvider);
+    _friendsService = ref.read(friendsServiceProvider);
     _connectPresence();
+    if (!_isGuest) {
+      _loadFriends();
+    }
   }
 
   /// Connect to Firebase and start the presence heartbeat + online counter.
@@ -51,9 +77,13 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
     try {
       final playerId = await _ensurePlayer();
       if (!mounted) return;
-      await _service.heartbeatPresence(playerId);
+      setState(() => _playerId = playerId);
+      final auth = ref.read(authServiceProvider);
+      final displayName = auth.user?.displayName;
+      final email = auth.user?.email;
+      await _service.heartbeatPresence(playerId, displayName: displayName, email: email);
       _heartbeatTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-        _service.heartbeatPresence(playerId);
+        _service.heartbeatPresence(playerId, displayName: displayName, email: email);
       });
       _onlineCountSub = _service.watchOnlineCount().listen((count) {
         if (mounted) setState(() => _onlineCount = count);
@@ -63,11 +93,73 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
     }
   }
 
+  Future<void> _loadFriends() async {
+    setState(() => _isLoadingFriends = true);
+    final auth = ref.read(authServiceProvider);
+    final uid = auth.user?.id ?? '';
+    final friends = await _friendsService.getFriends(uid);
+    if (mounted) {
+      setState(() {
+        _friendsList = friends;
+        _isLoadingFriends = false;
+      });
+    }
+  }
+
+  Future<void> _onSearchFriends(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      setState(() => _searchResults = []);
+      return;
+    }
+    setState(() => _isSearchingFriends = true);
+    final results = await _friendsService.searchUsers(
+      q,
+      currentUserId: _playerId,
+    );
+    if (mounted) {
+      setState(() {
+        _searchResults = results;
+        _isSearchingFriends = false;
+      });
+    }
+  }
+
+  Future<void> _onAddFriend(Friend friend) async {
+    final auth = ref.read(authServiceProvider);
+    final uid = auth.user?.id ?? '';
+    final updated = await _friendsService.addFriend(uid, friend);
+    if (mounted) {
+      setState(() {
+        _friendsList = updated;
+        _searchResults.removeWhere((r) => r.id == friend.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added ${friend.displayName} to friends!')),
+      );
+    }
+  }
+
+  Future<void> _onRemoveFriend(String friendId, String name) async {
+    final auth = ref.read(authServiceProvider);
+    final uid = auth.user?.id ?? '';
+    final updated = await _friendsService.removeFriend(uid, friendId);
+    if (mounted) {
+      setState(() => _friendsList = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Removed $name from friends.')),
+      );
+    }
+  }
+
   @override
   void dispose() {
+    _friendEmailController.dispose();
+    _searchFriendController.dispose();
     _subscription?.cancel();
     _onlineCountSub?.cancel();
     _heartbeatTimer?.cancel();
+    _searchTicker?.cancel();
     _cancelWaitingMatch();
     _tabController.dispose();
     super.dispose();
@@ -198,24 +290,28 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
             ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.terracotta,
-          labelColor: AppTheme.terracotta,
-          unselectedLabelColor: AppTheme.charcoal.withValues(alpha: 0.5),
-          tabs: const [
-            Tab(text: 'Find Match'),
-            Tab(text: 'Play with Friend'),
-          ],
-        ),
+        bottom: _isGuest
+            ? null
+            : TabBar(
+                controller: _tabController,
+                indicatorColor: AppTheme.terracotta,
+                labelColor: AppTheme.terracotta,
+                unselectedLabelColor: AppTheme.charcoal.withValues(alpha: 0.5),
+                tabs: const [
+                  Tab(text: 'Find Match'),
+                  Tab(text: 'Play with Friend'),
+                ],
+              ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildFindMatchTab(),
-          _buildPlayWithFriendTab(),
-        ],
-      ),
+      body: _isGuest
+          ? _buildFindMatchTab()
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildFindMatchTab(),
+                _buildPlayWithFriendTab(),
+              ],
+            ),
     );
   }
 
@@ -397,15 +493,40 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
           Text(
             waitingMatch == null
                 ? 'Connecting to game server...'
-                : 'Looking for a random player with matching settings...',
+                : 'Looking for a player ($_searchSeconds\s elapsed)...',
             style: TextStyle(
               color: AppTheme.charcoal.withValues(alpha: 0.6),
             ),
           ),
+          if (_searchSeconds >= 6) ...[
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: () {
+                _cancelSearch();
+                context.go('/game', extra: {
+                  'level': _selectedLevel,
+                  'mode': GameMode.offline,
+                  'timer': _selectedTimer,
+                  'aiDifficulty': AIDifficulty.medium,
+                  'playerRole': _playAsTiger ? PieceType.tiger : PieceType.goat,
+                });
+              },
+              icon: const Icon(Icons.smart_toy, size: 16),
+              label: Text(
+                _playAsTiger ? 'Match with Goat Bot 🐐' : 'Match with Tiger Bot 🐯',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.forestGreen,
+                side: const BorderSide(color: AppTheme.forestGreen),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           TextButton(
             onPressed: _cancelSearch,
-            child: const Text('Cancel'),
+            child: const Text('Cancel Search'),
           ),
         ],
       ),
@@ -415,6 +536,13 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
 
 
   Future<void> _startSearching() async {
+    _searchTicker?.cancel();
+    _searchSeconds = 0;
+    _searchTicker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted && _isSearching) {
+        setState(() => _searchSeconds++);
+      }
+    });
     setState(() => _isSearching = true);
     Timer? searchTimeout;
     try {
@@ -429,6 +557,7 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
       );
       if (existing != null) {
         if (!mounted) return;
+        _searchTicker?.cancel();
         setState(() => _isSearching = false);
         _launchGame(existing);
         return;
@@ -456,6 +585,7 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
         if (!mounted) return;
         if (match.status == MatchStatus.inProgress) {
           searchTimeout?.cancel();
+          _searchTicker?.cancel();
           _subscription?.cancel();
           _subscription = null;
           setState(() {
@@ -466,6 +596,7 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
         } else if (match.status == MatchStatus.cancelled ||
             match.status == MatchStatus.completed) {
           searchTimeout?.cancel();
+          _searchTicker?.cancel();
           _subscription?.cancel();
           _subscription = null;
           setState(() {
@@ -476,43 +607,365 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
       });
     } on FirebaseNotConfiguredException catch (e) {
       if (!mounted) return;
+      _searchTicker?.cancel();
       setState(() => _isSearching = false);
       _showError(e.message);
     } catch (e) {
       if (!mounted) return;
+      _searchTicker?.cancel();
       setState(() => _isSearching = false);
       _showError(_friendlyError(e, 'Could not find a match'));
     }
   }
 
   void _cancelSearch() {
+    _searchTicker?.cancel();
+    _searchSeconds = 0;
     _subscription?.cancel();
     _subscription = null;
     _cancelWaitingMatch();
     setState(() => _isSearching = false);
   }
 
-  // ================= PLAY WITH FRIEND =================
+  // ================= PLAY WITH FRIEND (CHESS.COM STYLE) =================
 
   Widget _buildPlayWithFriendTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+    return StreamBuilder<List<OnlinePlayer>>(
+      stream: _service.watchOnlinePlayers(currentUserId: _playerId),
+      builder: (context, snapshot) {
+        final onlinePlayers = snapshot.data ?? [];
+        final onlineIds = onlinePlayers.map((p) => p.id).toSet();
+        final onlineEmails = onlinePlayers.map((p) => p.email.toLowerCase()).toSet();
+
+        final friendsWithStatus = _friendsList.map((f) {
+          final isOnline = onlineIds.contains(f.id) ||
+              (f.email.isNotEmpty && onlineEmails.contains(f.email.toLowerCase()));
+          return f.copyWith(isOnline: isOnline);
+        }).toList();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Find Friend
+              _buildSectionTitle('Find Friends 🔍'),
+              const SizedBox(height: 10),
+              _buildFindFriendCard(onlinePlayers),
+
+              const SizedBox(height: 28),
+
+              // 2. List of Added Friends
+              _buildSectionTitle('Added Friends (${friendsWithStatus.length}) 👥'),
+              const SizedBox(height: 10),
+              _buildAddedFriendsCard(friendsWithStatus),
+
+              const SizedBox(height: 28),
+
+              // 3. Custom Challenge & Invite
+              _buildSectionTitle('Custom Challenge / Invite ✉️'),
+              const SizedBox(height: 10),
+              _buildCustomChallengeCard(),
+
+              const SizedBox(height: 24),
+              _buildSectionTitle('Join Game with Code'),
+              const SizedBox(height: 10),
+              _buildJoinGameCard(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFindFriendCard(List<OnlinePlayer> onlinePlayers) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.sandalwood),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Create Game'),
-          const SizedBox(height: 12),
-          _buildCreateGameCard(),
-          const SizedBox(height: 32),
-          _buildSectionTitle('Join Game'),
-          const SizedBox(height: 12),
-          _buildJoinGameCard(),
+          TextField(
+            controller: _searchFriendController,
+            decoration: InputDecoration(
+              hintText: 'Search by username or email...',
+              prefixIcon: const Icon(Icons.search, color: AppTheme.peacockBlue),
+              suffixIcon: _searchFriendController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchFriendController.clear();
+                        _onSearchFriends('');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.sandalwood),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onChanged: _onSearchFriends,
+            onSubmitted: _onSearchFriends,
+          ),
+          if (_isSearchingFriends) ...[
+            const SizedBox(height: 16),
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ] else if (_searchResults.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text(
+              'Search Results',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal),
+            ),
+            const SizedBox(height: 8),
+            for (final user in _searchResults)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.parchment,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppTheme.tigerOrange,
+                      child: Text(
+                        user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '🐯',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(user.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          if (user.email.isNotEmpty)
+                            Text(user.email, style: TextStyle(color: Colors.grey.shade600, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => _onAddFriend(user),
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        foregroundColor: AppTheme.peacockBlue,
+                        side: const BorderSide(color: AppTheme.peacockBlue),
+                      ),
+                      child: const Text('Add Friend', style: TextStyle(fontSize: 12)),
+                    ),
+                    const SizedBox(width: 6),
+                    ElevatedButton(
+                      onPressed: () => _createEmailGame(user.email.isNotEmpty ? user.email : user.displayName),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.greenAccent,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text('Play ⚔️', style: TextStyle(fontSize: 12, color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+          ] else if (onlinePlayers.isNotEmpty && _searchFriendController.text.isEmpty) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+                const SizedBox(width: 6),
+                const Text('Players Online Now', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.charcoal)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final p in onlinePlayers.take(4))
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.parchment.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: AppTheme.tigerOrange.withValues(alpha: 0.2),
+                      child: Text(
+                        p.displayName.isNotEmpty ? p.displayName[0].toUpperCase() : '🐯',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.tigerOrange, fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(p.displayName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => _onAddFriend(Friend(
+                        id: p.id,
+                        displayName: p.displayName,
+                        email: p.email,
+                        addedAt: DateTime.now(),
+                      )),
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        side: const BorderSide(color: AppTheme.peacockBlue),
+                      ),
+                      child: const Text('Add Friend', style: TextStyle(fontSize: 11, color: AppTheme.peacockBlue)),
+                    ),
+                    const SizedBox(width: 6),
+                    ElevatedButton(
+                      onPressed: () => _createEmailGame(p.email.isNotEmpty ? p.email : p.displayName),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.greenAccent,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      ),
+                      child: const Text('Play ⚔️', style: TextStyle(fontSize: 11, color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildCreateGameCard() {
+  Widget _buildAddedFriendsCard(List<Friend> friends) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.sandalwood),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_isLoadingFriends)
+            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2)))
+          else if (friends.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    Icon(Icons.people_outline, size: 40, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'No friends added yet',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Find friends above to challenge them anytime!',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            for (final f in friends)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.parchment.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.sandalwood.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppTheme.tigerOrange,
+                          child: Text(
+                            f.displayName.isNotEmpty ? f.displayName[0].toUpperCase() : '🐯',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: f.isOnline ? Colors.green : Colors.grey,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            f.displayName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                f.isOnline ? 'Online now' : 'Offline',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: f.isOnline ? Colors.green.shade700 : Colors.grey.shade500,
+                                  fontWeight: f.isOnline ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                              if (f.email.isNotEmpty) ...[
+                                const Text(' • ', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                Expanded(
+                                  child: Text(
+                                    f.email,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => _createEmailGame(f.email.isNotEmpty ? f.email : f.displayName),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.peacockBlue,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      child: const Text('Play ⚔️', style: TextStyle(fontSize: 12, color: Colors.white)),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(Icons.close, size: 18, color: Colors.grey.shade600),
+                      tooltip: 'Remove friend',
+                      onPressed: () => _onRemoveFriend(f.id, f.displayName),
+                    ),
+                  ],
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomChallengeCard() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -521,38 +974,171 @@ class _OnlinePlayScreenState extends ConsumerState<OnlinePlayScreen>
         border: Border.all(color: AppTheme.sandalwood),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.share, size: 48, color: AppTheme.peacockBlue),
-          const SizedBox(height: 12),
-          const Text(
-            'Create a private game and share\nthe code with your friend',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.charcoal),
+          // Board Level Selector
+          const Text('Board Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.charcoal)),
+          const SizedBox(height: 8),
+          SegmentedButton<BoardLevel>(
+            segments: const [
+              ButtonSegment(value: BoardLevel.square, label: Text('Square (Default)')),
+              ButtonSegment(value: BoardLevel.traditional, label: Text('Traditional')),
+              ButtonSegment(value: BoardLevel.pyramid, label: Text('Pyramid')),
+            ],
+            selected: {_selectedLevel},
+            onSelectionChanged: (set) => setState(() => _selectedLevel = set.first),
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _createPrivateGame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.peacockBlue,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 16),
+
+          // Timer Selector
+          const Text('Time Control', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.charcoal)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              GameTimer.bullet,
+              GameTimer.blitz,
+              GameTimer.five,
+              GameTimer.ten,
+              GameTimer.unlimited,
+            ]
+                .map((GameTimer t) => ChoiceChip(
+                      label: Text(t.label),
+                      selected: _selectedTimer == t,
+                      selectedColor: AppTheme.peacockBlue.withValues(alpha: 0.2),
+                      onSelected: (_) => setState(() => _selectedTimer = t),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+
+          // Play as Tiger or Goat
+          const Text('Play As', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.charcoal)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('Tigers 🐯'),
+                  selected: _playAsTiger,
+                  selectedColor: AppTheme.tigerOrange.withValues(alpha: 0.2),
+                  onSelected: (_) => setState(() => _playAsTiger = true),
                 ),
               ),
-              child: const Text(
-                'Create Game',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              const SizedBox(width: 8),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('Goats 🐐'),
+                  selected: !_playAsTiger,
+                  selectedColor: AppTheme.greenAccent.withValues(alpha: 0.2),
+                  onSelected: (_) => setState(() => _playAsTiger = false),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          const Divider(color: Colors.black12),
+          const SizedBox(height: 12),
+
+          // Direct Email Challenge
+          const Text('Direct Challenge by Email:', style: TextStyle(fontSize: 12, color: AppTheme.charcoal)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _friendEmailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              hintText: 'friend@example.com',
+              prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.peacockBlue),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.sandalwood),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.send, color: Colors.white, size: 18),
+              label: const Text('Send Challenge & Wait', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              onPressed: () => _createEmailGame(_friendEmailController.text),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.peacockBlue,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.share, size: 18, color: AppTheme.peacockBlue),
+              label: const Text('Generate Shareable Code', style: TextStyle(color: AppTheme.peacockBlue, fontWeight: FontWeight.bold)),
+              onPressed: _createPrivateGame,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: const BorderSide(color: AppTheme.peacockBlue),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _createEmailGame(String targetEmail) async {
+    final email = targetEmail.trim();
+    if (email.isEmpty) {
+      _showError('Please enter an email address or player name.');
+      return;
+    }
+    try {
+      final playerId = await _ensurePlayer();
+      final match = await _service.createEmailChallenge(
+        playerId: playerId,
+        targetEmail: email,
+        level: _selectedLevel,
+        timer: _selectedTimer,
+        playAsTiger: _playAsTiger,
+      );
+      if (!mounted) return;
+      _waitingMatch = match;
+      _dialogVisible = true;
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _InviteCodeDialog(
+          code: match.inviteCode ?? '',
+          title: 'Challenge for $email',
+          subtitle: 'Waiting for friend to accept. Or share code:',
+        ),
+      ).whenComplete(() => _dialogVisible = false);
+
+      _subscription = _service.watchMatch(match.id).listen((updated) {
+        if (!mounted) return;
+        if (updated.status == MatchStatus.inProgress) {
+          _subscription?.cancel();
+          _subscription = null;
+          _waitingMatch = null;
+          if (_dialogVisible) Navigator.of(context).pop();
+          _launchGame(updated);
+        } else if (updated.status == MatchStatus.cancelled ||
+            updated.status == MatchStatus.completed) {
+          _subscription?.cancel();
+          _subscription = null;
+          _waitingMatch = null;
+          if (_dialogVisible) Navigator.of(context).pop();
+        }
+      });
+    } on FirebaseNotConfiguredException catch (e) {
+      _showError(e.message);
+    } catch (e) {
+      _showError(_friendlyError(e, 'Could not create challenge'));
+    }
   }
 
   Widget _buildJoinGameCard() {
@@ -918,23 +1504,29 @@ class _RoleCard extends StatelessWidget {
 /// game starts) when the friend joins via the code.
 class _InviteCodeDialog extends StatelessWidget {
   final String code;
+  final String title;
+  final String subtitle;
 
-  const _InviteCodeDialog({required this.code});
+  const _InviteCodeDialog({
+    required this.code,
+    this.title = 'Invite Friend',
+    this.subtitle = 'Share this code with your friend:',
+  });
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: AppTheme.cream,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
-        'Invite Friend',
+      title: Text(
+        title,
         textAlign: TextAlign.center,
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Share this code with your friend:',
+          Text(
+            subtitle,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),

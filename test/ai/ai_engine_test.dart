@@ -45,7 +45,7 @@ void main() {
           initialState,
           const Move(
             from: Position(-1, -1),
-            to: Position(2, 2),
+            to: Position(1, 2),
             pieceType: PieceType.goat,
           ),
         );
@@ -180,7 +180,7 @@ void main() {
           initialState,
           const Move(
             from: Position(-1, -1),
-            to: Position(2, 2),
+            to: Position(1, 2),
             pieceType: PieceType.goat,
           ),
         );

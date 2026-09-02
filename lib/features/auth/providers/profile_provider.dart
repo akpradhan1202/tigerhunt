@@ -45,6 +45,8 @@ class ProfileService extends StateNotifier<UserProfile?> {
         return AuthProvider.google;
       case AuthType.apple:
         return AuthProvider.apple;
+      case AuthType.phone:
+        return AuthProvider.phone;
       case AuthType.guest:
         return AuthProvider.guest;
     }

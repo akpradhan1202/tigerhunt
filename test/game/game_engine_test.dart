@@ -290,7 +290,7 @@ void main() {
     test('initial state has correct setup', () {
       final state = GameState.initial(BoardLevel.traditional);
 
-      expect(state.tigers.length, equals(4));
+      expect(state.tigers.length, equals(5));
       expect(state.goatsOnBoard.length, equals(0));
       expect(state.currentTurn, equals(PlayerTurn.goat));
       expect(state.phase, equals(GamePhase.placement));
@@ -298,7 +298,7 @@ void main() {
       expect(state.goatsCaptured, equals(0));
     });
 
-    test('tigers start at corners', () {
+    test('tigers start at corners and center', () {
       final state = GameState.initial(BoardLevel.traditional);
       final tigerPositions = state.tigers.map((t) => t.position).toSet();
 
@@ -306,24 +306,30 @@ void main() {
       expect(tigerPositions, contains(const Position(0, 4)));
       expect(tigerPositions, contains(const Position(4, 0)));
       expect(tigerPositions, contains(const Position(4, 4)));
+      expect(tigerPositions, contains(const Position(2, 2)));
     });
 
     test('getPieceAt returns correct piece', () {
       final state = GameState.initial(BoardLevel.traditional);
 
-      final tiger = state.getPieceAt(const Position(0, 0));
-      expect(tiger, isNotNull);
-      expect(tiger!.type, equals(PieceType.tiger));
+      final tigerCorner = state.getPieceAt(const Position(0, 0));
+      expect(tigerCorner, isNotNull);
+      expect(tigerCorner!.type, equals(PieceType.tiger));
 
-      final empty = state.getPieceAt(const Position(2, 2));
+      final tigerCenter = state.getPieceAt(const Position(2, 2));
+      expect(tigerCenter, isNotNull);
+      expect(tigerCenter!.type, equals(PieceType.tiger));
+
+      final empty = state.getPieceAt(const Position(0, 1));
       expect(empty, isNull);
     });
 
     test('isPositionEmpty works correctly', () {
       final state = GameState.initial(BoardLevel.traditional);
 
-      expect(state.isPositionEmpty(const Position(0, 0)), isFalse); // Tiger
-      expect(state.isPositionEmpty(const Position(2, 2)), isTrue); // Empty
+      expect(state.isPositionEmpty(const Position(0, 0)), isFalse); // Tiger Corner
+      expect(state.isPositionEmpty(const Position(2, 2)), isFalse); // Tiger Center
+      expect(state.isPositionEmpty(const Position(0, 1)), isTrue); // Empty
     });
   });
 
@@ -341,8 +347,8 @@ void main() {
         final moves = engine.getValidMoves(initialState);
 
         // Traditional board has 49 positions (5x5 grid + 4 fan extensions of
-        // 6 nodes each); 4 are occupied by tigers, so 45 empty placement spots
-        expect(moves.length, equals(45));
+        // 6 nodes each); 5 are occupied by tigers, so 44 empty placement spots
+        expect(moves.length, equals(44));
 
         // All moves should be placements
         for (final move in moves) {
@@ -365,7 +371,7 @@ void main() {
       test('placing a goat updates state correctly', () {
         const move = Move(
           from: Position(-1, -1),
-          to: Position(2, 2),
+          to: Position(1, 2),
           pieceType: PieceType.goat,
         );
 
@@ -380,33 +386,30 @@ void main() {
       test('phase changes after all goats placed', () {
         var state = initialState;
 
-        // Place all 20 goats
+        // Place all 20 goats on empty positions
         int goatCount = 0;
-        for (int row = 0; row < 5; row++) {
-          for (int col = 0; col < 5; col++) {
-            if (state.isPositionEmpty(Position(row, col))) {
-              final move = Move(
-                from: const Position(-1, -1),
-                to: Position(row, col),
-                pieceType: PieceType.goat,
-              );
-              if (engine.isValidMove(state, move)) {
-                state = engine.executeMove(state, move);
-                goatCount++;
+        for (final pos in engine.connections.allPositions) {
+          if (state.isPositionEmpty(pos)) {
+            final move = Move(
+              from: const Position(-1, -1),
+              to: pos,
+              pieceType: PieceType.goat,
+            );
+            if (engine.isValidMove(state, move)) {
+              state = engine.executeMove(state, move);
+              goatCount++;
 
-                // Skip tiger turns for simplicity
-                if (state.currentTurn == PlayerTurn.tiger) {
-                  final tigerMoves = engine.getValidMoves(state);
-                  if (tigerMoves.isNotEmpty) {
-                    state = engine.executeMove(state, tigerMoves.first);
-                  }
+              // Skip tiger turns for simplicity
+              if (state.currentTurn == PlayerTurn.tiger) {
+                final tigerMoves = engine.getValidMoves(state);
+                if (tigerMoves.isNotEmpty) {
+                  state = engine.executeMove(state, tigerMoves.first);
                 }
-
-                if (goatCount >= 20) break;
               }
+
+              if (goatCount >= 20) break;
             }
           }
-          if (goatCount >= 20) break;
         }
 
         expect(state.allGoatsPlaced, isTrue);
@@ -420,7 +423,7 @@ void main() {
           initialState,
           const Move(
             from: Position(-1, -1),
-            to: Position(2, 2),
+            to: Position(1, 2),
             pieceType: PieceType.goat,
           ),
         );
@@ -487,7 +490,7 @@ void main() {
       });
 
       test('re-capturing a goat placed on the same square removes it', () {
-        // Scenario: a tiger captures a goat at (2,2), the player places a new
+        // Scenario: a tiger captures a goat at (0,1), the player places a new
         // goat on the same square, and the tiger captures again. The NEW goat
         // must be the one removed - the previously captured goat's stale
         // position must not shadow it.
@@ -495,84 +498,62 @@ void main() {
           initialState,
           const Move(
             from: Position(-1, -1),
-            to: Position(2, 2),
+            to: Position(0, 1),
             pieceType: PieceType.goat,
           ),
         );
 
-        // Move a tiger from corner (0,0) to (1,1), next to the goat.
+        // Tiger at (0,0) captures over (0,1) landing at (0,2).
         state = engine.executeMove(
           state,
           const Move(
             from: Position(0, 0),
-            to: Position(1, 1),
-            pieceType: PieceType.tiger,
-          ),
-        );
-
-        // Place a filler goat somewhere else so it's the tiger's turn again.
-        state = engine.executeMove(
-          state,
-          const Move(
-            from: Position(-1, -1),
             to: Position(0, 2),
-            pieceType: PieceType.goat,
-          ),
-        );
-
-        // Tiger at (1,1) captures over (2,2) and lands at (3,3).
-        state = engine.executeMove(
-          state,
-          const Move(
-            from: Position(1, 1),
-            to: Position(3, 3),
-            capturedAt: Position(2, 2),
+            capturedAt: Position(0, 1),
             pieceType: PieceType.tiger,
           ),
         );
         expect(state.goatsCaptured, equals(1));
-        expect(state.isPositionEmpty(const Position(2, 2)), isTrue);
+        expect(state.isPositionEmpty(const Position(0, 1)), isTrue);
 
-        // Player re-places a goat on the same square (2,2).
+        // Player re-places a goat on the same square (0,1).
         state = engine.executeMove(
           state,
           const Move(
             from: Position(-1, -1),
-            to: Position(2, 2),
+            to: Position(0, 1),
             pieceType: PieceType.goat,
           ),
         );
-        // Filler goat at (0,2) + the re-placed goat at (2,2).
-        expect(state.goatsOnBoard.length, equals(2));
-        expect(state.getPieceAt(const Position(2, 2))!.isCaptured, isFalse);
+        expect(state.goatsOnBoard.length, equals(1));
+        expect(state.getPieceAt(const Position(0, 1))!.isCaptured, isFalse);
 
-        // Tiger at (3,3) captures back over (2,2) landing at (1,1).
+        // Tiger at (0,2) captures back over (0,1) landing at (0,0).
         state = engine.executeMove(
           state,
           const Move(
-            from: Position(3, 3),
-            to: Position(1, 1),
-            capturedAt: Position(2, 2),
+            from: Position(0, 2),
+            to: Position(0, 0),
+            capturedAt: Position(0, 1),
             pieceType: PieceType.tiger,
           ),
         );
 
         expect(state.goatsCaptured, equals(2));
-        // Only the filler goat at (0,2) remains on the board.
-        expect(state.goatsOnBoard.length, equals(1));
-        expect(state.isPositionEmpty(const Position(2, 2)), isTrue);
-        expect(state.getPieceAt(const Position(2, 2)), isNull);
+        expect(state.goatsOnBoard.length, equals(0));
+        expect(state.isPositionEmpty(const Position(0, 1)), isTrue);
+        expect(state.getPieceAt(const Position(0, 1)), isNull);
       });
     });
 
     group('Undo / Replay', () {
       test('replayMoves rolls back the board to an earlier state', () {
-        // Goat at (2,2), then a tiger slides in next to it.
+        // Goat at (0,1), then a tiger slides in next to it.
         var state = engine.executeMove(
           initialState,
           const Move(
             from: Position(-1, -1),
-            to: Position(2, 2),
+            to: Position(0, 1),
             pieceType: PieceType.goat,
           ),
         );
@@ -580,7 +561,7 @@ void main() {
           state,
           const Move(
             from: Position(0, 0),
-            to: Position(1, 1),
+            to: Position(1, 0),
             pieceType: PieceType.tiger,
           ),
         );
@@ -589,16 +570,16 @@ void main() {
         // Undo one move (keep 1) -> back to just the goat placed.
         final afterOne = engine.replayMoves(state, 1);
         expect(afterOne.moveHistory.length, equals(1));
-        expect(afterOne.getPieceAt(const Position(1, 1)), isNull);
+        expect(afterOne.getPieceAt(const Position(1, 0)), isNull);
         expect(afterOne.getPieceAt(const Position(0, 0)), isNotNull);
-        expect(afterOne.getPieceAt(const Position(2, 2)), isNotNull);
+        expect(afterOne.getPieceAt(const Position(0, 1)), isNotNull);
         expect(afterOne.currentTurn, equals(PlayerTurn.tiger));
 
-        // Undo everything -> fresh board, 45 empty placement spots.
+        // Undo everything -> fresh board, 44 empty placement spots (49 total - 5 tigers).
         final fresh = engine.replayMoves(state, 0);
         expect(fresh.moveHistory, isEmpty);
         expect(fresh.goatsOnBoard, isEmpty);
-        expect(engine.getValidMoves(fresh).length, equals(45));
+        expect(engine.getValidMoves(fresh).length, equals(44));
       });
 
       test('replayMoves reproduces captures and win states', () {

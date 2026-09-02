@@ -4,12 +4,28 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../firebase_options.dart';
 import '../../features/game/models/game_models.dart';
 import '../../features/game/models/game_state.dart';
+import '../../features/chat/models/chat_message.dart';
+
+/// Online player model representing an active user on the platform
+class OnlinePlayer {
+  final String id;
+  final String displayName;
+  final String email;
+  final DateTime lastActive;
+
+  const OnlinePlayer({
+    required this.id,
+    required this.displayName,
+    required this.email,
+    required this.lastActive,
+  });
+}
 
 /// Online match status
 enum MatchStatus {
@@ -44,6 +60,8 @@ class OnlineMatch {
   /// Player id of the player who offered a draw, or null when no offer is
   /// pending.
   final String? drawOffer;
+  final List<Position> collapsedPositions;
+  final bool suddenDeathTriggered;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -58,6 +76,8 @@ class OnlineMatch {
     this.winner,
     this.inviteCode,
     this.drawOffer,
+    this.collapsedPositions = const [],
+    this.suddenDeathTriggered = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -166,13 +186,111 @@ class MultiplayerService {
   /// we count docs with a recent `lastActive` timestamp.
   static const Duration _presenceStale = Duration(minutes: 2);
 
-  Future<void> heartbeatPresence(String playerId) async {
+  Future<void> heartbeatPresence(
+    String playerId, {
+    String? displayName,
+    String? email,
+  }) async {
     try {
-      await _db.collection('presence').doc(playerId).set({
+      final data = <String, dynamic>{
         'lastActive': Timestamp.fromDate(DateTime.now()),
-      });
+      };
+      if (displayName != null && displayName.isNotEmpty) {
+        data['displayName'] = displayName;
+      }
+      if (email != null && email.isNotEmpty) {
+        data['email'] = email;
+      }
+      await _db.collection('presence').doc(playerId).set(
+            data,
+            SetOptions(merge: true),
+          );
     } catch (_) {
       // Presence is best-effort; ignore failures.
+    }
+  }
+
+  /// Stream of online players currently active on the platform
+  Stream<List<OnlinePlayer>> watchOnlinePlayers({String? currentUserId}) {
+    return _db
+        .collection('presence')
+        .snapshots()
+        .map((snap) {
+          final cutoff = DateTime.now().subtract(_presenceStale);
+          final players = <OnlinePlayer>[];
+          for (final doc in snap.docs) {
+            if (doc.id == currentUserId) continue; // Exclude self
+            final data = doc.data();
+            final ts = data['lastActive'];
+            DateTime? lastActive;
+            if (ts is Timestamp) {
+              lastActive = ts.toDate();
+            }
+            if (lastActive != null && lastActive.isAfter(cutoff)) {
+              players.add(OnlinePlayer(
+                id: doc.id,
+                displayName: data['displayName'] as String? ?? 'Tiger Player',
+                email: data['email'] as String? ?? '',
+                lastActive: lastActive,
+              ));
+            }
+          }
+          return players;
+        })
+        .handleError((_) => <OnlinePlayer>[]);
+  }
+
+  /// Create a direct match challenge for a specific friend by email
+  Future<OnlineMatch> createEmailChallenge({
+    required String playerId,
+    required String targetEmail,
+    required BoardLevel level,
+    required GameTimer timer,
+    bool playAsTiger = true,
+  }) async {
+    final inviteCode = generateInviteCode();
+    final match = await createMatch(
+      playerId: playerId,
+      level: level,
+      timer: timer,
+      playAsTiger: playAsTiger,
+      inviteCode: inviteCode,
+    );
+    try {
+      await _db.collection(_matchesCollection).doc(match.id).update({
+        'targetEmail': targetEmail.trim().toLowerCase(),
+      });
+    } catch (_) {}
+    return match;
+  }
+
+  /// Stream real-time chat messages for an online match
+  Stream<List<ChatMessage>> watchChatMessages(String matchId) {
+    return _db
+        .collection(_matchesCollection)
+        .doc(matchId)
+        .collection('messages')
+        .orderBy('timestamp', descending: false)
+        .snapshots()
+        .map((snap) {
+          return snap.docs
+              .map((doc) => ChatMessage.fromJson(doc.data()))
+              .toList();
+        })
+        .handleError((_) => <ChatMessage>[]);
+  }
+
+  /// Send a chat message in an online match
+  Future<void> sendChatMessage(String matchId, ChatMessage message) async {
+    try {
+      await _db
+          .collection(_matchesCollection)
+          .doc(matchId)
+          .collection('messages')
+          .doc(message.id)
+          .set(message.toJson());
+    } catch (e) {
+      debugPrint('Error sending chat message: $e');
     }
   }
 
@@ -266,7 +384,7 @@ class MultiplayerService {
   }
 
   /// Join a private match by its invite code. Returns null when the code is
-  /// invalid or the match is already full.
+  /// invalid or the match is already full or created by the same player.
   Future<OnlineMatch?> joinByInviteCode({
     required String playerId,
     required String code,
@@ -281,6 +399,11 @@ class MultiplayerService {
     final doc = snap.docs.first;
     final data = doc.data();
     if (data['status'] != MatchStatus.waiting.name) return null;
+    // Prevent self-play (cannot join own game as player 2)
+    if (data['tigerPlayerId'] == playerId || data['goatPlayerId'] == playerId) {
+      return null;
+    }
+
     if (data['tigerPlayerId'] == null) {
       return _claimSlot(doc.reference, 'tigerPlayerId', playerId);
     }
@@ -288,6 +411,35 @@ class MultiplayerService {
       return _claimSlot(doc.reference, 'goatPlayerId', playerId);
     }
     return null; // Both slots are filled
+  }
+
+  /// Find an ongoing match for this player that is currently in progress.
+  Future<OnlineMatch?> getActiveMatch(String playerId) async {
+    try {
+      final snap = await _db
+          .collection(_matchesCollection)
+          .where('status', isEqualTo: MatchStatus.inProgress.name)
+          .limit(10)
+          .get();
+
+      for (final doc in snap.docs) {
+        final match = _fromMap(doc.id, doc.data());
+        if (match.isPlayer(playerId)) {
+          // If opponent slot is missing or match is abandoned (> 30 mins with no updates), clean it up
+          if (match.tigerPlayerId == null || match.goatPlayerId == null) {
+            cancelMatch(match.id);
+            continue;
+          }
+          final age = DateTime.now().difference(match.createdAt);
+          if (age.inHours >= 1) {
+            cancelMatch(match.id);
+            continue;
+          }
+          return match;
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<OnlineMatch> getMatch(String matchId) async {
@@ -418,6 +570,23 @@ class MultiplayerService {
     return buffer.toString();
   }
 
+  /// Trigger or advance Sudden Death board collapse in an online match
+  Future<void> updateSuddenDeathCollapse(
+    String matchId,
+    Set<Position> collapsed,
+  ) async {
+    final ref = _db.collection(_matchesCollection).doc(matchId);
+    try {
+      await ref.update({
+        'suddenDeathTriggered': true,
+        'collapsedPositions': collapsed.map((p) => {'row': p.row, 'col': p.col}).toList(),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (_) {
+      // Match may already be ended; nothing to do.
+    }
+  }
+
   /// Fetch the public leaderboard (profiles ordered by rating).
   Future<List<Map<String, dynamic>>> getLeaderboard({int limit = 50}) async {
     final snap = await _db
@@ -462,6 +631,13 @@ class MultiplayerService {
             ),
       inviteCode: data['inviteCode'] as String?,
       drawOffer: data['drawOffer'] as String?,
+      collapsedPositions: (data['collapsedPositions'] as List? ?? const [])
+          .map((p) => Position(
+                (p['row'] as num).toInt(),
+                (p['col'] as num).toInt(),
+              ))
+          .toList(),
+      suddenDeathTriggered: data['suddenDeathTriggered'] as bool? ?? false,
       createdAt: data['createdAt'] is Timestamp
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -482,8 +658,10 @@ class MultiplayerService {
         final data = _dataOf(snap);
         if (!snap.exists ||
             data['status'] != MatchStatus.waiting.name ||
-            data[slot] != null) {
-          throw StateError('Match no longer available');
+            data[slot] != null ||
+            data['tigerPlayerId'] == playerId ||
+            data['goatPlayerId'] == playerId) {
+          throw StateError('Match no longer available or cannot join own game');
         }
         tx.update(ref, {
           slot: playerId,
@@ -495,6 +673,11 @@ class MultiplayerService {
       return _fromMap(doc.id, _dataOf(doc));
     } catch (_) {
       try {
+        final snap = await ref.get();
+        final data = _dataOf(snap);
+        if (data['tigerPlayerId'] == playerId || data['goatPlayerId'] == playerId) {
+          return null;
+        }
         await ref.update({
           slot: playerId,
           'status': MatchStatus.inProgress.name,

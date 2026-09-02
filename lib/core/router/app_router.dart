@@ -8,11 +8,14 @@ import '../../features/play/screens/play_screen.dart';
 import '../../features/stats/screens/stats_screen.dart';
 import '../../features/tournaments/screens/tournaments_screen.dart';
 import '../../features/tutorial/screens/tutorial_screen.dart';
+import '../../features/rules/screens/game_rules_screen.dart';
 import '../../features/game/screens/game_screen.dart';
 import '../../features/game/screens/game_setup_screen.dart';
 import '../../features/game/models/game_models.dart';
 import '../../features/multiplayer/screens/online_play_screen.dart';
 import '../../features/challenges/models/challenge_models.dart';
+import '../../features/settings/screens/settings_screen.dart';
+import '../services/auth_service.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -22,26 +25,42 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: 'login',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const LoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final name = state.uri.queryParameters['name'] ?? extra['name'] as String?;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: LoginScreen(name: name),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
 
       // Play (game hub / landing screen)
       GoRoute(
         path: '/play',
         name: 'play',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const PlayScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final name = state.uri.queryParameters['name'] ?? extra['name'] as String?;
+          if (name != null && name.trim().isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final auth = ref.read(authServiceProvider);
+              if (!auth.isAuthenticated || (auth.isGuest && auth.user?.displayName != name.trim())) {
+                ref.read(authServiceProvider.notifier).signInAsGuest(name: name.trim());
+              }
+            });
+          }
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: const PlayScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
 
       // Game Setup
@@ -82,6 +101,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const TutorialScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Rules & Info
+      GoRoute(
+        path: '/rules',
+        name: 'rules',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const GameRulesScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -133,10 +165,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'game',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
+          final name = state.uri.queryParameters['name'] ?? extra['name'] as String?;
+          if (name != null && name.trim().isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final auth = ref.read(authServiceProvider);
+              if (!auth.isAuthenticated || (auth.isGuest && auth.user?.displayName != name.trim())) {
+                ref.read(authServiceProvider.notifier).signInAsGuest(name: name.trim());
+              }
+            });
+          }
           return CustomTransitionPage(
             key: state.pageKey,
             child: GameScreen(
-              level: extra['level'] as BoardLevel? ?? BoardLevel.traditional,
+              level: extra['level'] as BoardLevel? ?? BoardLevel.square,
               mode: extra['mode'] as GameMode? ?? GameMode.offline,
               timer: extra['timer'] as GameTimer? ?? GameTimer.unlimited,
               aiDifficulty: extra['aiDifficulty'] as AIDifficulty?,
@@ -164,13 +205,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/online',
         name: 'online',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const OnlinePlayScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final initialTab = extra?['tab'] as int? ?? 0;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: OnlinePlayScreen(initialTab: initialTab),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
 
       // Leaderboard
@@ -205,7 +250,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'settings',
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
-          child: const _PlaceholderScreen(title: 'Settings'),
+          child: const SettingsScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

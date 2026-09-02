@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_models.dart';
-import '../models/game_state.dart';
 
 /// Timer state
 class TimerState {
@@ -54,10 +53,12 @@ class TimerState {
 class GameTimerNotifier extends StateNotifier<TimerState> {
   Timer? _timer;
   final Duration initialTime;
+  final Duration increment;
   final void Function(PlayerTurn)? onTimeExpired;
 
   GameTimerNotifier({
     required this.initialTime,
+    this.increment = Duration.zero,
     this.onTimeExpired,
   }) : super(TimerState(
           tigerTime: initialTime,
@@ -86,7 +87,17 @@ class GameTimerNotifier extends StateNotifier<TimerState> {
     }
   }
 
-  /// Switch turn
+  /// Add Fischer time increment
+  void addIncrement(PlayerTurn player) {
+    if (increment == Duration.zero) return;
+    if (player == PlayerTurn.tiger) {
+      state = state.copyWith(tigerTime: state.tigerTime + increment);
+    } else {
+      state = state.copyWith(goatTime: state.goatTime + increment);
+    }
+  }
+
+  /// Switch turn (and optionally apply Fischer increment)
   void switchTurn(PlayerTurn newTurn) {
     state = state.copyWith(currentTurn: newTurn);
   }
@@ -142,6 +153,7 @@ final gameTimerProvider = StateNotifierProvider.autoDispose
     .family<GameTimerNotifier, TimerState, GameTimer>((ref, timer) {
   return GameTimerNotifier(
     initialTime: timer.duration,
+    increment: timer.increment,
     onTimeExpired: (player) {
       // Handle time expiration
       debugPrint('Time expired for $player');

@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/multiplayer_service.dart';
+import '../../game/models/game_models.dart';
 import '../../auth/providers/profile_provider.dart';
+import '../widgets/notifications_dialog.dart';
 
 /// Landing screen after login: the game hub with the Play section selected.
 /// Replaces the old Home screen - quick play, game modes and board levels
@@ -23,6 +27,35 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   static const double _desktopBreakpoint = 900;
 
   int _selectedNavIndex = 0;
+  OnlineMatch? _activeMatch;
+  Timer? _activeMatchPoller;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkActiveMatch();
+    _activeMatchPoller = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) _checkActiveMatch();
+    });
+  }
+
+  @override
+  void dispose() {
+    _activeMatchPoller?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkActiveMatch() async {
+    try {
+      final service = ref.read(multiplayerServiceProvider);
+      if (!MultiplayerService.isConfigured) return;
+      final playerId = await service.ensureReady();
+      final match = await service.getActiveMatch(playerId);
+      if (mounted) {
+        setState(() => _activeMatch = match);
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,11 +146,18 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 ),
               ],
             ),
-            onPressed: () {},
+            tooltip: 'Notifications',
+            onPressed: () => NotificationsDialog.show(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.menu_book_outlined, color: AppTheme.tigerOrange),
+            tooltip: 'Game Rules & Info',
+            onPressed: () => context.go('/rules'),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-            onPressed: () {},
+            tooltip: 'Settings',
+            onPressed: () => context.go('/settings'),
           ),
         ],
       ),
@@ -194,6 +234,12 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
               'Game History',
               5,
               onTap: () => context.go('/history'),
+            ),
+            _buildNavItem(
+              Icons.menu_book,
+              'Rules & Info',
+              6,
+              onTap: () => context.go('/rules'),
             ),
             const Spacer(),
             _buildProfileCard(),
@@ -274,6 +320,12 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             'Game History',
             5,
             onTap: () => context.go('/history'),
+          ),
+          _buildNavItem(
+            Icons.menu_book,
+            'Rules & Info',
+            6,
+            onTap: () => context.go('/rules'),
           ),
 
           const Spacer(),
@@ -408,6 +460,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Ongoing Game Banner (if match in progress)
+                  _buildOngoingMatchBanner(),
+
                   // Quick Play Section
                   _buildQuickPlaySection(),
 
@@ -431,6 +486,173 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   bool _isWide() {
     return MediaQuery.sizeOf(context).width >= _desktopBreakpoint;
+  }
+
+  Widget _buildOngoingMatchBanner() {
+    final match = _activeMatch;
+    if (match == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8B2500), Color(0xFFE86A17)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE86A17).withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Text('🎮', style: TextStyle(fontSize: 24)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'LIVE GAME',
+                        style: TextStyle(
+                          color: Color(0xFF8B2500),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        match.level.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Timer: ${match.timer.label} • Match in progress',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: () {
+              ref.read(multiplayerServiceProvider).cancelMatch(match.id);
+              setState(() => _activeMatch = null);
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white60),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              textStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+            ),
+            child: const Text('Dismiss'),
+          ),
+          const SizedBox(width: 6),
+          ElevatedButton(
+            onPressed: () {
+              final playerId = ref.read(authServiceProvider).user?.id ?? '';
+              final myRole = match.roleOf(playerId) ?? PieceType.tiger;
+              context.go('/game', extra: {
+                'level': match.level,
+                'mode': GameMode.online,
+                'timer': match.timer,
+                'aiDifficulty': null,
+                'playerRole': myRole,
+                'matchId': match.id,
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF8B2500),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            child: const Text('Resume'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _guardNewGame(VoidCallback onProceed) {
+    if (_activeMatch != null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.cardDark,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Ongoing Game Active', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'You already have an active online match in progress. Would you like to resume it or resign first?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ref.read(multiplayerServiceProvider).cancelMatch(_activeMatch!.id);
+                setState(() => _activeMatch = null);
+                onProceed();
+              },
+              child: const Text('Abandon & Start New', style: TextStyle(color: AppTheme.terracotta)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                final playerId = ref.read(authServiceProvider).user?.id ?? '';
+                final myRole = _activeMatch!.roleOf(playerId) ?? PieceType.tiger;
+                context.go('/game', extra: {
+                  'level': _activeMatch!.level,
+                  'mode': GameMode.online,
+                  'timer': _activeMatch!.timer,
+                  'aiDifficulty': null,
+                  'playerRole': myRole,
+                  'matchId': _activeMatch!.id,
+                });
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.greenAccent),
+              child: const Text('Resume Game'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    onProceed();
   }
 
   Widget _buildTopBar() {
@@ -481,12 +703,19 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 ),
               ],
             ),
-            onPressed: () {},
+            tooltip: 'Notifications',
+            onPressed: () => NotificationsDialog.show(context),
           ),
 
           IconButton(
+            icon: const Icon(Icons.menu_book_outlined, color: AppTheme.tigerOrange),
+            tooltip: 'Game Rules & Info',
+            onPressed: () => context.go('/rules'),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-            onPressed: () {},
+            tooltip: 'Settings',
+            onPressed: () => context.go('/settings'),
           ),
         ],
       ),
@@ -511,7 +740,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ElevatedButton.icon(
-                onPressed: () => context.go('/setup', extra: {'isVsAI': true}),
+                onPressed: () => _guardNewGame(() => context.go('/setup', extra: {'isVsAI': true})),
                 icon: const Icon(Icons.smart_toy, size: 18),
                 label: const Text('Play Bots'),
                 style: ElevatedButton.styleFrom(
@@ -522,9 +751,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
               ),
               const SizedBox(width: 12),
               OutlinedButton.icon(
-                onPressed: () => context.go('/setup', extra: {'isVsAI': false}),
+                onPressed: _onPlayWithFriendTapped,
                 icon: const Icon(Icons.people, size: 18),
-                label: const Text('With Friend'),
+                label: const Text('Play a Friend'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white, width: 1.5),
@@ -562,7 +791,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           ElevatedButton.icon(
-                            onPressed: () => context.go('/setup', extra: {'isVsAI': true}),
+                            onPressed: () => _guardNewGame(() => context.go('/setup', extra: {'isVsAI': true})),
                             icon: const Icon(Icons.smart_toy, size: 18),
                             label: const Text('Play Bots'),
                             style: ElevatedButton.styleFrom(
@@ -573,9 +802,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                           ),
                           const SizedBox(height: 10),
                           OutlinedButton.icon(
-                            onPressed: () => context.go('/setup', extra: {'isVsAI': false}),
+                            onPressed: _onPlayWithFriendTapped,
                             icon: const Icon(Icons.people, size: 18),
-                            label: const Text('With Friend'),
+                            label: const Text('Play a Friend'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
                               side: const BorderSide(color: Colors.white, width: 1.5),
@@ -611,6 +840,50 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     );
   }
 
+  void _onPlayWithFriendTapped() {
+    final auth = ref.read(authServiceProvider);
+    if (auth.user?.isGuest == true) {
+      _showGuestFriendPrompt();
+    } else {
+      _guardNewGame(() => context.go('/online', extra: {'tab': 1}));
+    }
+  }
+
+  void _showGuestFriendPrompt() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_outline, color: AppTheme.tigerOrange),
+            SizedBox(width: 8),
+            Text('Sign In Required', style: TextStyle(color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'Playing with friends, adding friends, and sending custom challenges requires a registered account.\n\nSign in or register for free to play with friends!',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Stay as Guest', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.go('/login');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.tigerOrange),
+            child: const Text('Sign In / Register'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildGameCardsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,21 +906,21 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 subtitle: 'Challenge players worldwide',
                 color: AppTheme.peacockBlue,
                 badge: 'LIVE',
-                onTap: () => context.go('/online'),
+                onTap: () => _guardNewGame(() => context.go('/online')),
               ),
               _buildGameCard(
                 icon: Icons.smart_toy_outlined,
                 title: 'Play Bots',
                 subtitle: 'Practice against AI',
                 color: AppTheme.greenAccent,
-                onTap: () => context.go('/setup', extra: {'isVsAI': true}),
+                onTap: () => _guardNewGame(() => context.go('/setup', extra: {'isVsAI': true})),
               ),
               _buildGameCard(
                 icon: Icons.people,
                 title: 'Pass & Play',
-                subtitle: 'Two players, one device',
+                subtitle: 'Two players, one device (Offline)',
                 color: AppTheme.saffron,
-                onTap: () => context.go('/setup', extra: {'isVsAI': false}),
+                onTap: () => _guardNewGame(() => context.go('/setup', extra: {'isVsAI': false})),
               ),
             ];
 
@@ -772,6 +1045,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 icon: '🔺',
                 color: AppTheme.turmeric,
                 isUnlocked: true,
+                onTap: () => _guardNewGame(() => context.go('/setup', extra: {'level': BoardLevel.pyramid, 'isVsAI': true})),
               ),
               _buildBoardLevelCard(
                 name: 'Square',
@@ -780,6 +1054,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 icon: '⬛',
                 color: AppTheme.peacockBlue,
                 isUnlocked: true,
+                onTap: () => _guardNewGame(() => context.go('/setup', extra: {'level': BoardLevel.square, 'isVsAI': true})),
               ),
               _buildBoardLevelCard(
                 name: 'Traditional',
@@ -788,6 +1063,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 icon: '✦',
                 color: AppTheme.greenAccent,
                 isUnlocked: true,
+                onTap: () => _guardNewGame(() => context.go('/setup', extra: {'level': BoardLevel.traditional, 'isVsAI': true})),
               ),
             ];
 
@@ -822,72 +1098,77 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     required String icon,
     required Color color,
     required bool isUnlocked,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.cardDark,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isUnlocked ? color.withValues(alpha: 0.3) : Colors.white12,
-          width: 1,
+    return InkWell(
+      onTap: isUnlocked ? onTap : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.cardDark,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isUnlocked ? color.withValues(alpha: 0.3) : Colors.white12,
+            width: 1,
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Text(icon, style: const TextStyle(fontSize: 28)),
-                  if (!isUnlocked)
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
+        child: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Text(icon, style: const TextStyle(fontSize: 28)),
+                    if (!isUnlocked)
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.lock, color: Colors.white54, size: 20),
                       ),
-                      child: const Icon(Icons.lock, color: Colors.white54, size: 20),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            name,
-            style: TextStyle(
-              color: isUnlocked ? Colors.white : Colors.white54,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 12),
+            Text(
+              name,
+              style: TextStyle(
+                color: isUnlocked ? Colors.white : Colors.white54,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            level,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 4),
+            Text(
+              level,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            description,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
-              fontSize: 12,
+            const SizedBox(height: 2),
+            Text(
+              description,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.5),
+                fontSize: 12,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

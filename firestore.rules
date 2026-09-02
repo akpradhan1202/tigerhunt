@@ -31,6 +31,11 @@ service cloud.firestore {
         && (!request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['stats.overallRating', 'stats.tigerRating', 'stats.goatRating']));
       allow delete: if false;
+
+      // Friends subcollection
+      match /friends/{friendId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // Matches collection
@@ -54,6 +59,14 @@ service cloud.firestore {
 
     // Game moves subcollection (reserved)
     match /matches/{matchId}/moves/{moveId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && exists(/databases/$(database)/documents/matches/$(matchId))
+        && isPlayerInMatch(get(/databases/$(database)/documents/matches/$(matchId)).data);
+    }
+
+    // Match messages subcollection
+    match /matches/{matchId}/messages/{messageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
         && exists(/databases/$(database)/documents/matches/$(matchId))

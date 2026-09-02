@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/profile_provider.dart';
+import '../../play/widgets/notifications_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -19,9 +20,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authServiceProvider);
     final user = authState.user;
-    final displayName = user?.isGuest == true || user == null
-        ? 'Guest Player'
-        : (user.displayName.isNotEmpty ? user.displayName : 'Player');
+    final displayName = (user != null && user.displayName.isNotEmpty)
+        ? user.displayName
+        : 'Guest Player';
     final rating = ref.watch(profileProvider)?.stats.overallRating;
 
     return Scaffold(
@@ -262,12 +263,14 @@ decoration: BoxDecoration(
                 ),
               ],
             ),
-            onPressed: () {},
+            tooltip: 'Notifications',
+            onPressed: () => NotificationsDialog.show(context),
           ),
 
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-            onPressed: () {},
+            tooltip: 'Settings',
+            onPressed: () => context.go('/settings'),
           ),
         ],
       ),
@@ -322,9 +325,16 @@ decoration: BoxDecoration(
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
-                      onPressed: () => context.go('/setup', extra: {'isVsAI': false}),
+                      onPressed: () {
+                        final auth = ref.read(authServiceProvider);
+                        if (auth.user?.isGuest == true) {
+                          context.go('/login');
+                        } else {
+                          context.go('/online', extra: {'tab': 1});
+                        }
+                      },
                       icon: const Icon(Icons.people, size: 18),
-                      label: const Text('With Friend'),
+                      label: const Text('Play a Friend'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: const BorderSide(color: Colors.white, width: 1.5),

@@ -35,6 +35,9 @@ class Position extends Equatable {
 /// Types of pieces in the game
 enum PieceType { tiger, goat }
 
+/// Current player turn
+enum PlayerTurn { tiger, goat }
+
 /// Represents a game piece
 class Piece extends Equatable {
   final PieceType type;
@@ -169,10 +172,10 @@ enum BoardLevel {
   ),
   traditional(
     name: 'Traditional',
-    description: 'Advanced - Classic Bagh-Chal',
+    description: 'Advanced - 5 Tigers & 20 Goats',
     rows: 5,
     cols: 5,
-    tigerCount: 4,
+    tigerCount: 5,
     goatCount: 20,
     goatsToWin: 5,
   );
@@ -196,22 +199,112 @@ enum BoardLevel {
   });
 }
 
-/// Timer presets for games
+/// Timer presets for games with Fischer increment support
 enum GameTimer {
-  five(minutes: 5, label: '5 min'),
-  ten(minutes: 10, label: '10 min'),
-  fifteen(minutes: 15, label: '15 min'),
-  thirty(minutes: 30, label: '30 min'),
-  sixty(minutes: 60, label: '1 hour'),
-  unlimited(minutes: 0, label: 'No limit');
+  bullet(minutes: 1, incrementSeconds: 2, label: '1 min (+2s)'),
+  twoMin(minutes: 2, incrementSeconds: 2, label: '2 min (+2s)'),
+  blitz(minutes: 3, incrementSeconds: 2, label: '3 min (+2s)'),
+  five(minutes: 5, incrementSeconds: 2, label: '5 min (+2s)'),
+  ten(minutes: 10, incrementSeconds: 3, label: '10 min (+3s)'),
+  fifteen(minutes: 15, incrementSeconds: 5, label: '15 min (+5s)'),
+  thirty(minutes: 30, incrementSeconds: 5, label: '30 min (+5s)'),
+  sixty(minutes: 60, incrementSeconds: 0, label: '1 hour'),
+  unlimited(minutes: 0, incrementSeconds: 0, label: 'No limit');
 
   final int minutes;
+  final int incrementSeconds;
   final String label;
 
-  const GameTimer({required this.minutes, required this.label});
+  const GameTimer({
+    required this.minutes,
+    this.incrementSeconds = 0,
+    required this.label,
+  });
 
   Duration get duration => Duration(minutes: minutes);
+  Duration get increment => Duration(seconds: incrementSeconds);
   bool get hasLimit => minutes > 0;
+}
+
+/// Tactical power-up abilities
+enum PowerUpType {
+  tigerRoar(
+    name: 'Tiger Roar',
+    description: 'Freezes an adjacent goat for 1 turn',
+    icon: '⚡',
+    turn: PlayerTurn.tiger,
+  ),
+  superPounce(
+    name: 'Super Pounce',
+    description: 'Leap over an empty spot (distance 2)',
+    icon: '🐆',
+    turn: PlayerTurn.tiger,
+  ),
+  hornShield(
+    name: 'Horn Shield',
+    description: 'Shields a goat from capture for 2 turns',
+    icon: '🛡️',
+    turn: PlayerTurn.goat,
+  ),
+  boulder(
+    name: 'Boulder',
+    description: 'Place a rock blocking an intersection for 3 turns',
+    icon: '🪨',
+    turn: PlayerTurn.goat,
+  );
+
+  final String name;
+  final String description;
+  final String icon;
+  final PlayerTurn turn;
+
+  const PowerUpType({
+    required this.name,
+    required this.description,
+    required this.icon,
+    required this.turn,
+  });
+}
+
+/// Represents an active tactical effect on the board
+class ActiveEffect extends Equatable {
+  final PowerUpType type;
+  final Position targetPosition;
+  final int turnsRemaining;
+  final PlayerTurn appliedBy;
+
+  const ActiveEffect({
+    required this.type,
+    required this.targetPosition,
+    required this.turnsRemaining,
+    required this.appliedBy,
+  });
+
+  ActiveEffect copyWith({
+    PowerUpType? type,
+    Position? targetPosition,
+    int? turnsRemaining,
+    PlayerTurn? appliedBy,
+  }) {
+    return ActiveEffect(
+      type: type ?? this.type,
+      targetPosition: targetPosition ?? this.targetPosition,
+      turnsRemaining: turnsRemaining ?? this.turnsRemaining,
+      appliedBy: appliedBy ?? this.appliedBy,
+    );
+  }
+
+  @override
+  List<Object?> get props => [type, targetPosition, turnsRemaining, appliedBy];
+}
+
+/// Reason why a draw occurred
+enum DrawReason {
+  none,
+  agreement,
+  threefoldRepetition,
+  stagnation,
+  timeout,
 }
 
 /// Game mode types

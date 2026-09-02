@@ -17,7 +17,7 @@ class GameSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _GameSetupScreenState extends ConsumerState<GameSetupScreen> {
-  BoardLevel _selectedBoard = BoardLevel.traditional;
+  BoardLevel _selectedBoard = BoardLevel.square;
   GameTimer _selectedTimer = GameTimer.ten;
   AIDifficulty _selectedDifficulty = AIDifficulty.medium;
   PieceType _selectedRole = PieceType.goat;
