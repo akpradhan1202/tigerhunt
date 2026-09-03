@@ -1,10 +1,14 @@
 package com.tigerhunt.tigerhunt.model
 
-enum class ChallengeDifficulty(val level: Int, val displayName: String, val baseReward: Int) {
-    EASY(1, "Easy", 50),
-    MEDIUM(2, "Medium", 100),
-    HARD(3, "Hard", 200),
-    EXPERT(4, "Expert", 500)
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+enum class ChallengeDifficulty(val level: Int, val displayName: String, val baseReward: Int, val coinReward: Int) {
+    EASY(1, "Easy", 50, 80),
+    MEDIUM(2, "Medium", 100, 150),
+    HARD(3, "Hard", 200, 250),
+    EXPERT(4, "Expert", 500, 400)
 }
 
 data class Puzzle(
@@ -16,8 +20,250 @@ data class Puzzle(
     val solution: List<Move>,
     val difficulty: ChallengeDifficulty,
     val rating: Int,
-    val explanation: String
-)
+    val explanation: String,
+    val coinReward: Int = difficulty.coinReward,
+    val isDaily: Boolean = false
+) {
+    val sequenceLength: Int get() = solution.size
+}
+
+object DailyChallengeManager {
+    fun getTodayDateString(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        return sdf.format(Date())
+    }
+
+    fun getDailyPuzzle(dateString: String = getTodayDateString()): Puzzle {
+        val hash = kotlin.math.abs(dateString.hashCode())
+        val index = hash % dailyChallengePool.size
+        val basePuzzle = dailyChallengePool[index]
+        return basePuzzle.copy(
+            id = "daily_${dateString}_${basePuzzle.id}",
+            title = "Daily Challenge: ${basePuzzle.title}",
+            isDaily = true,
+            coinReward = basePuzzle.difficulty.coinReward + 100 // Extra bonus for daily challenge
+        )
+    }
+
+    fun calculateDailyStreakBonus(streak: Int): Int {
+        return when {
+            streak >= 30 -> 250
+            streak >= 14 -> 150
+            streak >= 7 -> 100
+            streak >= 3 -> 50
+            else -> 20
+        }
+    }
+
+    fun getStreakMultiplier(streak: Int): Float {
+        return when {
+            streak >= 30 -> 2.5f
+            streak >= 14 -> 2.0f
+            streak >= 7 -> 1.5f
+            streak >= 3 -> 1.25f
+            else -> 1.0f
+        }
+    }
+
+    val dailyChallengePool: List<Puzzle> by lazy {
+        listOf(
+            Puzzle(
+                id = "daily_p1",
+                title = "Apex Corral Strike",
+                description = "2-Move Sequence: Force the apex tiger into an unescapable trap",
+                position = GameState(
+                    level = BoardLevel.TRADITIONAL,
+                    pieces = listOf(
+                        Piece(PieceType.TIGER, Position(0, 2), "t0"),
+                        Piece(PieceType.TIGER, Position(4, 0), "t1"),
+                        Piece(PieceType.TIGER, Position(4, 4), "t2"),
+                        Piece(PieceType.GOAT, Position(1, 3), "g0"),
+                        Piece(PieceType.GOAT, Position(2, 4), "g1"),
+                        Piece(PieceType.GOAT, Position(2, 0), "g2"),
+                        Piece(PieceType.GOAT, Position(2, 2), "g3")
+                    ),
+                    currentTurn = PlayerTurn.GOAT,
+                    phase = GamePhase.MOVEMENT,
+                    goatsPlaced = 20,
+                    goatsCaptured = 0
+                ),
+                playerRole = PieceType.GOAT,
+                solution = listOf(
+                    Move(Position(2, 2), Position(1, 1), null, PieceType.GOAT)
+                ),
+                difficulty = ChallengeDifficulty.MEDIUM,
+                rating = 1300,
+                explanation = "Sliding into (1,1) cuts off the apex tiger's only remaining step, locking it down completely!"
+            ),
+            Puzzle(
+                id = "daily_p2",
+                title = "Himalayan Double Ricochet",
+                description = "2-Move Sequence: Leap across diagonals to capture two goats in succession",
+                position = GameState(
+                    level = BoardLevel.TRADITIONAL,
+                    pieces = listOf(
+                        Piece(PieceType.TIGER, Position(4, 0), "t0"),
+                        Piece(PieceType.TIGER, Position(0, 0), "t1"),
+                        Piece(PieceType.TIGER, Position(0, 4), "t2"),
+                        Piece(PieceType.GOAT, Position(3, 1), "g0"),
+                        Piece(PieceType.GOAT, Position(3, 3), "g1")
+                    ),
+                    currentTurn = PlayerTurn.TIGER,
+                    phase = GamePhase.MOVEMENT,
+                    goatsPlaced = 20,
+                    goatsCaptured = 0
+                ),
+                playerRole = PieceType.TIGER,
+                solution = listOf(
+                    Move(Position(4, 0), Position(2, 2), Position(3, 1), PieceType.TIGER),
+                    Move(Position(2, 2), Position(4, 4), Position(3, 3), PieceType.TIGER)
+                ),
+                difficulty = ChallengeDifficulty.HARD,
+                rating = 1500,
+                explanation = "First leap into the central hub at (2,2) over (3,1), then ricochet down the second diagonal to (4,4) over (3,3)!"
+            ),
+            Puzzle(
+                id = "daily_p3",
+                title = "Center Sanctuary Shield",
+                description = "Deploy the crucial central goat to block 4 potential jump lanes",
+                position = GameState(
+                    level = BoardLevel.TRADITIONAL,
+                    pieces = listOf(
+                        Piece(PieceType.TIGER, Position(0, 0), "t0"),
+                        Piece(PieceType.TIGER, Position(0, 4), "t1"),
+                        Piece(PieceType.TIGER, Position(4, 0), "t2"),
+                        Piece(PieceType.TIGER, Position(4, 4), "t3"),
+                        Piece(PieceType.GOAT, Position(1, 1), "g0"),
+                        Piece(PieceType.GOAT, Position(1, 3), "g1"),
+                        Piece(PieceType.GOAT, Position(3, 1), "g2")
+                    ),
+                    currentTurn = PlayerTurn.GOAT,
+                    phase = GamePhase.PLACEMENT,
+                    goatsPlaced = 3,
+                    goatsCaptured = 0
+                ),
+                playerRole = PieceType.GOAT,
+                solution = listOf(
+                    Move(Position(-1, -1), Position(2, 2), null, PieceType.GOAT)
+                ),
+                difficulty = ChallengeDifficulty.EASY,
+                rating = 950,
+                explanation = "Dropping a goat at (2,2) locks the central nexus and stops tigers from penetrating the core of the board."
+            ),
+            Puzzle(
+                id = "daily_p4",
+                title = "Avalanche Triple Pounce",
+                description = "3-Move Sequence: Execute a devastating 3-part tiger leap sequence",
+                position = GameState(
+                    level = BoardLevel.TRADITIONAL,
+                    pieces = listOf(
+                        Piece(PieceType.TIGER, Position(0, 0), "t0"),
+                        Piece(PieceType.TIGER, Position(0, 4), "t1"),
+                        Piece(PieceType.TIGER, Position(4, 0), "t2"),
+                        Piece(PieceType.GOAT, Position(1, 1), "g0"),
+                        Piece(PieceType.GOAT, Position(3, 3), "g1"),
+                        Piece(PieceType.GOAT, Position(3, 4), "g2")
+                    ),
+                    currentTurn = PlayerTurn.TIGER,
+                    phase = GamePhase.MOVEMENT,
+                    goatsPlaced = 20,
+                    goatsCaptured = 0
+                ),
+                playerRole = PieceType.TIGER,
+                solution = listOf(
+                    Move(Position(0, 0), Position(2, 2), Position(1, 1), PieceType.TIGER),
+                    Move(Position(2, 2), Position(4, 4), Position(3, 3), PieceType.TIGER),
+                    Move(Position(4, 4), Position(2, 4), Position(3, 4), PieceType.TIGER)
+                ),
+                difficulty = ChallengeDifficulty.EXPERT,
+                rating = 1800,
+                explanation = "Three consecutive leaping captures: (0,0)->(2,2) over (1,1), then (2,2)->(4,4) over (3,3), then (4,4)->(2,4) over (3,4)!"
+            ),
+            Puzzle(
+                id = "daily_p5",
+                title = "Flank Interlocking Citadel",
+                description = "Reinforce the goat defensive perimeter to guard all flank entries",
+                position = GameState(
+                    level = BoardLevel.TRADITIONAL,
+                    pieces = listOf(
+                        Piece(PieceType.TIGER, Position(0, 2), "t0"),
+                        Piece(PieceType.TIGER, Position(2, 0), "t1"),
+                        Piece(PieceType.TIGER, Position(4, 2), "t2"),
+                        Piece(PieceType.GOAT, Position(1, 1), "g0"),
+                        Piece(PieceType.GOAT, Position(1, 2), "g1"),
+                        Piece(PieceType.GOAT, Position(2, 1), "g2")
+                    ),
+                    currentTurn = PlayerTurn.GOAT,
+                    phase = GamePhase.PLACEMENT,
+                    goatsPlaced = 3,
+                    goatsCaptured = 0
+                ),
+                playerRole = PieceType.GOAT,
+                solution = listOf(
+                    Move(Position(-1, -1), Position(2, 2), null, PieceType.GOAT)
+                ),
+                difficulty = ChallengeDifficulty.MEDIUM,
+                rating = 1200,
+                explanation = "Positioning a goat at (2,2) bonds all three nearby goats into a mutually defensive triangle."
+            ),
+            Puzzle(
+                id = "daily_p6",
+                title = "Final 5th Capture Blitz",
+                description = "Deliver the match-ending 5th goat leap for an instant win",
+                position = GameState(
+                    level = BoardLevel.TRADITIONAL,
+                    pieces = listOf(
+                        Piece(PieceType.TIGER, Position(0, 0), "t0"),
+                        Piece(PieceType.TIGER, Position(0, 4), "t1"),
+                        Piece(PieceType.TIGER, Position(4, 0), "t2"),
+                        Piece(PieceType.TIGER, Position(4, 4), "t3"),
+                        Piece(PieceType.GOAT, Position(1, 1), "g0")
+                    ),
+                    currentTurn = PlayerTurn.TIGER,
+                    phase = GamePhase.MOVEMENT,
+                    goatsPlaced = 20,
+                    goatsCaptured = 4
+                ),
+                playerRole = PieceType.TIGER,
+                solution = listOf(
+                    Move(Position(0, 0), Position(2, 2), Position(1, 1), PieceType.TIGER)
+                ),
+                difficulty = ChallengeDifficulty.HARD,
+                rating = 1450,
+                explanation = "Leaping over the solitary goat at (1,1) secures the decisive 5th capture!"
+            ),
+            Puzzle(
+                id = "daily_p7",
+                title = "Silent Sidestep Ambush",
+                description = "2-Move Sequence: Sidestep to unblock the vertical strike alley",
+                position = GameState(
+                    level = BoardLevel.TRADITIONAL,
+                    pieces = listOf(
+                        Piece(PieceType.TIGER, Position(0, 0), "t0"),
+                        Piece(PieceType.TIGER, Position(0, 4), "t1"),
+                        Piece(PieceType.TIGER, Position(4, 0), "t2"),
+                        Piece(PieceType.TIGER, Position(4, 4), "t3"),
+                        Piece(PieceType.GOAT, Position(1, 1), "g0"),
+                        Piece(PieceType.GOAT, Position(2, 2), "g1"),
+                        Piece(PieceType.GOAT, Position(1, 2), "g2")
+                    ),
+                    currentTurn = PlayerTurn.TIGER,
+                    phase = GamePhase.MOVEMENT,
+                    goatsPlaced = 20,
+                    goatsCaptured = 0
+                ),
+                playerRole = PieceType.TIGER,
+                solution = listOf(
+                    Move(Position(0, 0), Position(0, 1), null, PieceType.TIGER),
+                    Move(Position(0, 1), Position(2, 1), Position(1, 1), PieceType.TIGER)
+                ),
+                difficulty = ChallengeDifficulty.MEDIUM,
+                rating = 1250,
+                explanation = "Stepping sideways to (0,1) unmasks a direct vertical line down to (2,1) over the goat at (1,1)!"
+            )
+        )
+    }
+}
 
 object PuzzleLibrary {
     val allPuzzles: List<Puzzle> by lazy {

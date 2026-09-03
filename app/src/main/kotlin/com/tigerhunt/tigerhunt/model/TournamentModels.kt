@@ -22,7 +22,7 @@ data class TournamentMatch(
     val player1: TournamentContender,
     val player2: TournamentContender,
     val winner: TournamentContender? = null,
-    val boardLevel: BoardLevel = BoardLevel.TRADITIONAL
+    val boardLevel: BoardLevel = BoardLevel.SQUARE
 )
 
 data class TournamentState(

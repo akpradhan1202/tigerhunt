@@ -101,10 +101,10 @@ enum class GameTimer(
     val incrementSeconds: Int,
     val label: String
 ) {
-    BULLET(1, 2, "1 min (+2s)"),
-    BLITZ(3, 2, "3 min (+2s)"),
-    RAPID(5, 3, "5 min (+3s)"),
-    CLASSIC(10, 5, "10 min (+5s)"),
+    RAPID(5, 3, "5 min"),
+    CLASSIC(10, 5, "10 min"),
+    STANDARD(30, 10, "30 min"),
+    LONG_MATCH(60, 15, "1 hr"),
     UNLIMITED(0, 0, "No Limit");
 
     val hasLimit: Boolean get() = minutes > 0
@@ -141,8 +141,21 @@ enum class DrawReason {
 
 enum class GameMode(val displayName: String, val description: String) {
     VS_AI("vs AI", "Play against intelligent Bagh-Chal bot"),
+    PLAY_LIVE("Play Live", "Online matchmaking with global players"),
+    PLAY_FRIEND("Play Friend", "Private room code or local Pass & Play"),
     PASS_AND_PLAY("Pass & Play", "Local 2-player on the same device"),
     PUZZLES("Puzzles & Tactics", "Solve tactical board scenarios"),
     TOURNAMENT("Tournament", "Championship bracket elimination"),
     TUTORIAL("Learn to Play", "Interactive step-by-step tutorial")
 }
+
+data class OnlineOpponent(
+    val id: String,
+    val name: String,
+    val rating: Int,
+    val country: String,
+    val countryFlag: String,
+    val avatar: String,
+    val title: String = "Hunter",
+    val pingMs: Int = 42
+)

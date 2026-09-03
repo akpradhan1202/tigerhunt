@@ -1,6 +1,7 @@
 package com.tigerhunt.tigerhunt.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +32,10 @@ fun GameEndDialog(
     onHomeClick: () -> Unit,
     onDismiss: () -> Unit,
     isPuzzle: Boolean = false,
-    puzzleTitle: String? = null
+    puzzleTitle: String? = null,
+    isDaily: Boolean = false,
+    coinsEarned: Int? = null,
+    dailyStreak: Int? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -69,21 +73,36 @@ fun GameEndDialog(
                     modifier = Modifier
                         .size(64.dp)
                         .clip(CircleShape)
-                        .background(if (winner == GameWinner.TIGERS) AmberTigerDark else if (winner == GameWinner.GOATS) ValidGreen else DarkSurfaceVariant),
+                        .background(
+                            if (isPuzzle) ValidGreen.copy(alpha = 0.25f)
+                            else if (winner == GameWinner.TIGERS) AmberTigerDark
+                            else if (winner == GameWinner.GOATS) ValidGreen
+                            else DarkSurfaceVariant
+                        )
+                        .border(
+                            2.dp,
+                            if (isPuzzle) ValidGreen else HighlightGold,
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (winner == GameWinner.TIGERS) "🐅" else if (winner == GameWinner.GOATS) "🐐" else "🤝",
+                        text = if (isPuzzle) (if (isDaily) "🔥" else "🧩")
+                        else if (winner == GameWinner.TIGERS) "🐅"
+                        else if (winner == GameWinner.GOATS) "🐐"
+                        else "🤝",
                         fontSize = 32.sp
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = when (winner) {
-                        GameWinner.TIGERS -> "Tigers Victorious!"
-                        GameWinner.GOATS -> "Goats Trapped the Tigers!"
-                        GameWinner.DRAW -> "Match Drawn!"
-                        GameWinner.NONE -> "Game Over"
+                    text = when {
+                        isDaily -> "Daily Challenge Complete!"
+                        isPuzzle -> "Puzzle Solved!"
+                        winner == GameWinner.TIGERS -> "Tigers Victorious!"
+                        winner == GameWinner.GOATS -> "Goats Trapped the Tigers!"
+                        winner == GameWinner.DRAW -> "Match Drawn!"
+                        else -> "Game Over"
                     },
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
@@ -93,23 +112,83 @@ fun GameEndDialog(
             }
         },
         text = {
-            val description = when {
-                isPuzzle -> "Fantastic! You found the winning tactical sequence for $puzzleTitle!"
-                winner == GameWinner.TIGERS -> "The fierce tigers captured 5 goats and conquered the board."
-                winner == GameWinner.GOATS -> "The goats formed an impenetrable encirclement and immobilized all tigers!"
-                drawReason == DrawReason.THREEFOLD_REPETITION -> "The exact same board position was reached 3 times."
-                drawReason == DrawReason.STAGNATION -> "40 consecutive moves occurred without a capture."
-                drawReason == DrawReason.TIMEOUT -> "One of the hunters ran out of clock time."
-                else -> "A thrilling clash in the high Himalayas!"
-            }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                val description = when {
+                    isPuzzle -> "Fantastic! You found the winning tactical sequence for $puzzleTitle!"
+                    winner == GameWinner.TIGERS -> "The fierce tigers captured 5 goats and conquered the board."
+                    winner == GameWinner.GOATS -> "The goats formed an impenetrable encirclement and immobilized all tigers!"
+                    drawReason == DrawReason.THREEFOLD_REPETITION -> "The exact same board position was reached 3 times."
+                    drawReason == DrawReason.STAGNATION -> "40 consecutive moves occurred without a capture."
+                    drawReason == DrawReason.TIMEOUT -> "One of the hunters ran out of clock time."
+                    else -> "A thrilling clash in the high Himalayas!"
+                }
 
-            Text(
-                text = description,
-                color = GoatIvoryDark,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+                Text(
+                    text = description,
+                    color = GoatIvoryDark,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (isPuzzle) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = DarkSurfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, HighlightGold.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🪙", fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "+${coinsEarned ?: 150}",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HighlightGold
+                                    )
+                                }
+                                Text("Bagh Coins", fontSize = 11.sp, color = GoatIvoryDark)
+                            }
+
+                            if (isDaily && dailyStreak != null) {
+                                Divider(
+                                    modifier = Modifier
+                                        .height(28.dp)
+                                        .width(1.dp),
+                                    color = DarkBackground
+                                )
+
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("🔥", fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "$dailyStreak Days",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AmberTigerLight
+                                        )
+                                    }
+                                    Text("Daily Streak", fontSize = 11.sp, color = GoatIvoryDark)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     )
 }

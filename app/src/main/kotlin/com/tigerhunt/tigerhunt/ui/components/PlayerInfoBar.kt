@@ -16,9 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tigerhunt.tigerhunt.model.GameState
-import com.tigerhunt.tigerhunt.model.PieceType
-import com.tigerhunt.tigerhunt.model.PlayerTurn
+import com.tigerhunt.tigerhunt.model.*
+import com.tigerhunt.tigerhunt.ui.components.PlayerAvatar
 import com.tigerhunt.tigerhunt.ui.theme.*
 
 @Composable
@@ -26,6 +25,10 @@ fun PlayerInfoBar(
     gameState: GameState,
     isTigerPlayer: Boolean,
     isAiThinking: Boolean,
+    gameMode: GameMode = GameMode.VS_AI,
+    userProfile: UserProfile? = null,
+    onlineOpponent: OnlineOpponent? = null,
+    friendName: String = "Friend",
     modifier: Modifier = Modifier
 ) {
     val isGoatActive = gameState.currentTurn == PlayerTurn.GOAT
@@ -39,6 +42,53 @@ fun PlayerInfoBar(
         if (isTigerActive) DarkSurfaceVariant else DarkSurface,
         label = "tiger_bg"
     )
+
+    // Player labels based on mode
+    val goatLabel: String
+    val goatSubLabel: String
+    val tigerLabel: String
+    val tigerSubLabel: String
+
+    when (gameMode) {
+        GameMode.PLAY_LIVE -> {
+            if (!isTigerPlayer) {
+                goatLabel = userProfile?.username ?: "You"
+                goatSubLabel = "${userProfile?.rating ?: 1200} ELO"
+                tigerLabel = onlineOpponent?.let { "${it.countryFlag} ${it.name}" } ?: "Opponent"
+                tigerSubLabel = onlineOpponent?.let { "${it.rating} ELO • ${it.pingMs}ms" } ?: "1200 ELO"
+            } else {
+                goatLabel = onlineOpponent?.let { "${it.countryFlag} ${it.name}" } ?: "Opponent"
+                goatSubLabel = onlineOpponent?.let { "${it.rating} ELO • ${it.pingMs}ms" } ?: "1200 ELO"
+                tigerLabel = userProfile?.username ?: "You"
+                tigerSubLabel = "${userProfile?.rating ?: 1200} ELO"
+            }
+        }
+        GameMode.PLAY_FRIEND -> {
+            if (!isTigerPlayer) {
+                goatLabel = userProfile?.username ?: "You"
+                goatSubLabel = "Goat Player"
+                tigerLabel = friendName
+                tigerSubLabel = "Tiger Player"
+            } else {
+                goatLabel = friendName
+                goatSubLabel = "Goat Player"
+                tigerLabel = userProfile?.username ?: "You"
+                tigerSubLabel = "Tiger Player"
+            }
+        }
+        GameMode.PASS_AND_PLAY -> {
+            goatLabel = userProfile?.username ?: "Player 1"
+            goatSubLabel = "Goats"
+            tigerLabel = friendName
+            tigerSubLabel = "Tigers"
+        }
+        else -> {
+            goatLabel = if (isTigerPlayer) "Bagh-Chal AI" else (userProfile?.username ?: "Goats")
+            goatSubLabel = "Placed: ${gameState.goatsPlaced}/${gameState.level.goatCount}"
+            tigerLabel = if (isTigerPlayer) (userProfile?.username ?: "Tigers") else "Bagh-Chal AI"
+            tigerSubLabel = if (isAiThinking && isTigerActive) "Thinking..." else "Count: ${gameState.tigers.size}"
+        }
+    }
 
     Row(
         modifier = modifier
@@ -65,24 +115,25 @@ fun PlayerInfoBar(
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE0E0E0)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🐐", fontSize = 20.sp)
-                }
+                val isUserGoat = !isTigerPlayer && userProfile != null
+                PlayerAvatar(
+                    avatarId = if (isUserGoat) userProfile.avatarId else (if (gameMode == GameMode.PLAY_LIVE) onlineOpponent?.avatar ?: "🐐" else "🐐"),
+                    customAvatarUri = if (isUserGoat) userProfile.customAvatarUri else null,
+                    size = 38.dp,
+                    fontSize = 20.sp,
+                    borderColor = if (isGoatActive) HighlightGold else DarkSurfaceVariant,
+                    borderWidth = 1.5.dp
+                )
 
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Goats",
+                            text = goatLabel,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
+                            maxLines = 1,
                             color = Color.White
                         )
                         if (isGoatActive) {
@@ -97,7 +148,7 @@ fun PlayerInfoBar(
                     }
 
                     Text(
-                        text = "Placed: ${gameState.goatsPlaced}/${gameState.level.goatCount}",
+                        text = if (gameMode == GameMode.PLAY_LIVE || gameMode == GameMode.PLAY_FRIEND) goatSubLabel else "Placed: ${gameState.goatsPlaced}/${gameState.level.goatCount}",
                         fontSize = 11.sp,
                         color = GoatIvoryDark
                     )
@@ -116,12 +167,12 @@ fun PlayerInfoBar(
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         // CENTER CAPTURED RACK
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier.padding(horizontal = 2.dp)
         ) {
             Text(
                 text = "Captured",
@@ -137,7 +188,7 @@ fun PlayerInfoBar(
                     val isCaptured = i < gameState.goatsCaptured
                     Box(
                         modifier = Modifier
-                            .size(10.dp)
+                            .size(9.dp)
                             .clip(CircleShape)
                             .background(if (isCaptured) NepalRed else Color.DarkGray)
                             .border(
@@ -156,7 +207,7 @@ fun PlayerInfoBar(
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         // TIGER CARD
         Card(
@@ -189,15 +240,16 @@ fun PlayerInfoBar(
                             Spacer(modifier = Modifier.width(4.dp))
                         }
                         Text(
-                            text = "Tigers",
+                            text = tigerLabel,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
+                            maxLines = 1,
                             color = AmberTiger
                         )
                     }
 
                     Text(
-                        text = if (isAiThinking && isTigerActive) "Thinking..." else "Count: ${gameState.tigers.size}",
+                        text = if (isAiThinking && isTigerActive) "Thinking..." else tigerSubLabel,
                         fontSize = 11.sp,
                         color = if (isAiThinking && isTigerActive) HighlightGold else AmberTigerLight
                     )
@@ -216,15 +268,15 @@ fun PlayerInfoBar(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(AmberTigerDark),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🐅", fontSize = 20.sp)
-                }
+                val isUserTiger = isTigerPlayer && userProfile != null
+                PlayerAvatar(
+                    avatarId = if (isUserTiger) userProfile.avatarId else (if (gameMode == GameMode.PLAY_LIVE) onlineOpponent?.avatar ?: "🐅" else "🐅"),
+                    customAvatarUri = if (isUserTiger) userProfile.customAvatarUri else null,
+                    size = 38.dp,
+                    fontSize = 20.sp,
+                    borderColor = if (isTigerActive) AmberTiger else DarkSurfaceVariant,
+                    borderWidth = 1.5.dp
+                )
             }
         }
     }
